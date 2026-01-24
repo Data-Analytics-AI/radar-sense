@@ -12,7 +12,6 @@ import {
   Brain,
   Settings,
   Users,
-  Shield,
   ChevronLeft,
   ChevronRight,
   Sparkles,
@@ -20,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import snapnetLogo from '@/assets/snapnet-logo.png';
 
 interface NavItem {
   label: string;
@@ -76,8 +76,9 @@ const NavSection = ({
             to={item.href}
             className={cn(
               'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
-              'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-              isActive && 'bg-primary/10 text-primary border border-primary/20 glow-primary',
+              'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:scale-[1.02]',
+              'active:scale-[0.98]',
+              isActive && 'bg-primary/10 text-primary border border-primary/20 shadow-sm',
               !isActive && 'text-sidebar-foreground',
               collapsed && 'justify-center px-2'
             )}
@@ -131,19 +132,27 @@ export const Sidebar = () => {
       'h-screen bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300',
       collapsed ? 'w-[68px]' : 'w-64'
     )}>
-      {/* Logo */}
+      {/* Logo Section - Snapnet + SentinelAI */}
       <div className={cn(
-        'h-16 border-b border-sidebar-border flex items-center px-4',
+        'h-20 border-b border-sidebar-border flex items-center px-4',
         collapsed && 'justify-center px-2'
       )}>
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <Shield className="w-5 h-5 text-primary-foreground" />
-          </div>
+        <div className="flex items-center gap-3">
+          <img 
+            src={snapnetLogo} 
+            alt="Snapnet" 
+            className={cn(
+              'h-10 w-auto object-contain',
+              collapsed && 'h-8'
+            )}
+          />
           {!collapsed && (
-            <div>
-              <h1 className="font-bold text-foreground tracking-tight">SentinelAI</h1>
-              <p className="text-[10px] text-muted-foreground -mt-0.5">Fraud Detection Platform</p>
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-px bg-border"></div>
+              <div>
+                <h1 className="font-bold text-foreground tracking-tight text-sm">SentinelAI</h1>
+                <p className="text-[9px] text-muted-foreground -mt-0.5">Fraud Detection</p>
+              </div>
             </div>
           )}
         </div>
@@ -163,7 +172,7 @@ export const Sidebar = () => {
           size="sm"
           onClick={() => setCollapsed(!collapsed)}
           className={cn(
-            'w-full text-muted-foreground hover:text-foreground',
+            'w-full text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all',
             collapsed && 'px-2'
           )}
         >

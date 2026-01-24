@@ -230,7 +230,7 @@ Is there a specific transaction, customer, or case you'd like me to analyze in d
                     ? 'bg-muted/50 border border-border' 
                     : 'bg-primary/10 border border-primary/20 ml-auto'
                 )}>
-                  <div className="prose prose-sm prose-invert max-w-none">
+                  <div className="prose prose-sm max-w-none text-foreground">
                     {message.content.split('\n').map((line, i) => (
                       <p key={i} className="mb-2 last:mb-0 text-sm whitespace-pre-wrap">
                         {line}
