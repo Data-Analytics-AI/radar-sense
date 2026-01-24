@@ -6,46 +6,46 @@
 
 @layer base {
   :root {
-    /* Base surfaces */
-    --background: 222 47% 5%;
-    --foreground: 210 40% 98%;
+    /* Base surfaces - Light theme with white background */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
 
     /* Cards & elevated surfaces */
-    --card: 222 47% 8%;
-    --card-foreground: 210 40% 98%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
 
     /* Popover & dropdown */
-    --popover: 222 47% 10%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
 
-    /* Primary - Electric Blue */
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 5%;
+    /* Primary - Snapnet Red */
+    --primary: 0 72% 45%;
+    --primary-foreground: 0 0% 100%;
 
     /* Secondary - Slate */
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 222 47% 11%;
 
     /* Muted surfaces */
-    --muted: 217 33% 12%;
-    --muted-foreground: 215 20% 55%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
 
-    /* Accent - Cyan glow */
-    --accent: 199 89% 48%;
-    --accent-foreground: 222 47% 5%;
+    /* Accent - Dark gray from Snapnet logo */
+    --accent: 0 0% 30%;
+    --accent-foreground: 0 0% 100%;
 
     /* Status colors */
     --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
 
     --success: 160 84% 39%;
-    --success-foreground: 210 40% 98%;
+    --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
-    --warning-foreground: 222 47% 5%;
+    --warning-foreground: 222 47% 11%;
 
     --critical: 0 84% 60%;
-    --critical-foreground: 210 40% 98%;
+    --critical-foreground: 0 0% 100%;
 
     /* Risk level colors */
     --risk-low: 160 84% 39%;
@@ -54,44 +54,64 @@
     --risk-critical: 0 84% 60%;
 
     /* Chart colors */
-    --chart-1: 217 91% 60%;
+    --chart-1: 0 72% 45%;
     --chart-2: 160 84% 39%;
     --chart-3: 38 92% 50%;
     --chart-4: 280 87% 65%;
     --chart-5: 199 89% 48%;
 
     /* UI elements */
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 217 91% 60%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 0 72% 45%;
 
     --radius: 0.5rem;
 
-    /* Sidebar */
-    --sidebar-background: 222 47% 6%;
-    --sidebar-foreground: 215 20% 65%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 222 47% 5%;
-    --sidebar-accent: 217 33% 12%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 33% 15%;
-    --sidebar-ring: 217 91% 60%;
+    /* Sidebar - Light theme */
+    --sidebar-background: 220 14% 97%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 0 72% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 93%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 0 72% 45%;
 
     /* Custom gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(199 89% 48%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(0 72% 45%) 0%, hsl(0 72% 55%) 100%);
     --gradient-danger: linear-gradient(135deg, hsl(0 84% 60%) 0%, hsl(25 95% 53%) 100%);
     --gradient-success: linear-gradient(135deg, hsl(160 84% 39%) 0%, hsl(172 66% 50%) 100%);
-    --gradient-surface: linear-gradient(180deg, hsl(222 47% 10%) 0%, hsl(222 47% 6%) 100%);
-    --gradient-glow: radial-gradient(ellipse at center, hsl(217 91% 60% / 0.15) 0%, transparent 70%);
+    --gradient-surface: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(220 14% 97%) 100%);
+    --gradient-glow: radial-gradient(ellipse at center, hsl(0 72% 45% / 0.1) 0%, transparent 70%);
 
-    /* Shadows */
-    --shadow-glow: 0 0 20px -5px hsl(217 91% 60% / 0.4);
-    --shadow-card: 0 4px 6px -1px hsl(222 47% 3% / 0.5), 0 2px 4px -2px hsl(222 47% 3% / 0.5);
-    --shadow-elevated: 0 10px 15px -3px hsl(222 47% 3% / 0.5), 0 4px 6px -4px hsl(222 47% 3% / 0.5);
+    /* Shadows - Light theme */
+    --shadow-glow: 0 0 20px -5px hsl(0 72% 45% / 0.3);
+    --shadow-card: 0 1px 3px 0 hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+    --shadow-elevated: 0 4px 6px -1px hsl(0 0% 0% / 0.1), 0 2px 4px -2px hsl(0 0% 0% / 0.1);
   }
 
   .dark {
-    /* Dark mode is default - same as root */
+    /* Dark mode - same as before */
+    --background: 222 47% 5%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 8%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 10%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 0 72% 45%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 12%;
+    --muted-foreground: 215 20% 55%;
+    --accent: 0 0% 40%;
+    --accent-foreground: 0 0% 100%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --sidebar-background: 222 47% 6%;
+    --sidebar-foreground: 215 20% 65%;
+    --sidebar-border: 217 33% 15%;
+    --sidebar-accent: 217 33% 12%;
   }
 }
 
