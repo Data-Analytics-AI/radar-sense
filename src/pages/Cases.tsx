@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { RiskScoreBadge } from '@/components/dashboard/RiskScoreBadge';
+import { NewCaseDialog } from '@/components/cases/NewCaseDialog';
 import { generateTransactions, generateAlerts, generateCases } from '@/lib/mock-data';
 import { Case, CaseStatus } from '@/types';
 import { formatDistanceToNow, differenceInDays } from 'date-fns';
@@ -20,6 +21,7 @@ import { cn } from '@/lib/utils';
 
 const Cases = () => {
   const [statusFilter, setStatusFilter] = useState<CaseStatus | 'all'>('all');
+  const [isNewCaseOpen, setIsNewCaseOpen] = useState(false);
   
   const cases = useMemo(() => {
     const transactions = generateTransactions(200);
@@ -65,7 +67,7 @@ const Cases = () => {
           </h1>
           <p className="text-muted-foreground">Investigate and resolve fraud and AML cases</p>
         </div>
-        <Button>
+        <Button onClick={() => setIsNewCaseOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           New Case
         </Button>
@@ -206,6 +208,11 @@ const Cases = () => {
           <p className="text-muted-foreground">No cases found</p>
         </div>
       )}
+      
+      <NewCaseDialog 
+        open={isNewCaseOpen} 
+        onOpenChange={setIsNewCaseOpen}
+      />
     </div>
   );
 };

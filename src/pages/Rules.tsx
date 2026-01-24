@@ -3,7 +3,6 @@ import {
   BookOpen, 
   Plus,
   Search,
-  ToggleLeft,
   ToggleRight,
   Edit,
   Trash2,
@@ -14,13 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { CreateRuleDialog } from '@/components/rules/CreateRuleDialog';
 import { generateRules } from '@/lib/mock-data';
 import { Rule } from '@/types';
 import { cn } from '@/lib/utils';
@@ -28,6 +21,7 @@ import { cn } from '@/lib/utils';
 const Rules = () => {
   const [rules, setRules] = useState<Rule[]>(() => generateRules());
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'fraud' | 'aml'>('all');
+  const [isCreateRuleOpen, setIsCreateRuleOpen] = useState(false);
   
   const filteredRules = useMemo(() => {
     if (categoryFilter === 'all') return rules;
@@ -58,6 +52,10 @@ const Rules = () => {
         return '📋';
     }
   };
+
+  const handleRuleCreated = (newRule: Partial<Rule>) => {
+    setRules(prev => [newRule as Rule, ...prev]);
+  };
   
   return (
     <div className="space-y-6 animate-fade-in">
@@ -70,7 +68,7 @@ const Rules = () => {
           </h1>
           <p className="text-muted-foreground">Configure fraud and AML detection rules</p>
         </div>
-        <Button>
+        <Button onClick={() => setIsCreateRuleOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Create Rule
         </Button>
@@ -222,6 +220,12 @@ const Rules = () => {
           </div>
         ))}
       </div>
+      
+      <CreateRuleDialog 
+        open={isCreateRuleOpen} 
+        onOpenChange={setIsCreateRuleOpen}
+        onRuleCreated={handleRuleCreated}
+      />
     </div>
   );
 };

@@ -1,23 +1,22 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { 
   Sparkles, 
   Send,
   MessageSquare,
   FileText,
   AlertTriangle,
-  Loader2
+  Loader2,
+  Trash2,
+  Bot,
+  User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/hooks/use-toast';
+import { useAIChat } from '@/hooks/useAIChat';
 import { cn } from '@/lib/utils';
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-}
 
 const suggestedQueries = [
   "Why was transaction TXN-A7X3F2 flagged?",
@@ -28,160 +27,31 @@ const suggestedQueries = [
 ];
 
 const AIAssistant = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: `Hello! I'm SentinelAI's investigation assistant. I can help you with:
-
-• **Case Analysis**: Ask me about specific transactions, customers, or cases
-• **Pattern Detection**: Identify suspicious patterns and behaviors
-• **SAR Drafting**: Generate draft narratives for Suspicious Activity Reports
-• **Historical Comparison**: Compare current activity against historical baselines
-
-How can I assist your investigation today?`,
-      timestamp: new Date()
-    }
-  ]);
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
   
+  const { messages, isLoading, sendMessage, clearMessages } = useAIChat({
+    onError: (error) => {
+      toast({
+        title: "AI Assistant Error",
+        description: error,
+        variant: "destructive",
+      });
+    },
+  });
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
-    
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input,
-      timestamp: new Date()
-    };
-    
-    setMessages(prev => [...prev, userMessage]);
+    const message = input.trim();
     setInput('');
-    setIsLoading(true);
-    
-    // Simulate AI response
-    setTimeout(() => {
-      let response = '';
-      
-      if (input.toLowerCase().includes('flagged') || input.toLowerCase().includes('txn')) {
-        response = `**Transaction Analysis: TXN-A7X3F2**
-
-This transaction was flagged as **HIGH RISK (Score: 78)** due to multiple contributing factors:
-
-1. **Amount Deviation** (Impact: +25 points)
-   - Transaction amount of $9,500 is 5.2x higher than customer's 30-day average of $1,827
-
-2. **New Device Detection** (Impact: +20 points)
-   - Device fingerprint DEV-x8k2m not previously associated with this customer
-   - First-time use of Android device (historically uses iOS)
-
-3. **Geographic Anomaly** (Impact: +15 points)
-   - Transaction originated from Lagos, Nigeria
-   - Customer's typical transaction locations: New York, Boston
-   - Distance from last transaction: 8,234 km
-
-4. **Velocity Trigger** (Impact: +12 points)
-   - 8 transactions in the past 2 hours vs. average of 2 per day
-
-5. **Time-Based Risk** (Impact: +6 points)
-   - Transaction occurred at 3:15 AM local time (unusual for this customer)
-
-**Recommendation**: This transaction warrants immediate investigation. The combination of new device, unusual location, and high velocity pattern is consistent with account takeover (ATO) scenarios.
-
-Would you like me to pull the customer's full transaction history or check for similar patterns across other accounts?`;
-      } else if (input.toLowerCase().includes('structuring') || input.toLowerCase().includes('pattern')) {
-        response = `**Structuring Analysis: CUST-4521**
-
-I've analyzed the transaction history for this customer and identified potential structuring patterns:
-
-**🚨 Alert: Possible Smurfing Detected**
-
-Over the past 7 days, this customer has made **12 transactions** totaling **$113,400**:
-
-| Date | Amount | Recipient | Flag |
-|------|--------|-----------|------|
-| Jan 20 | $9,800 | Western Union | ⚠️ Just below threshold |
-| Jan 20 | $9,500 | Wire Transfer | ⚠️ Just below threshold |
-| Jan 19 | $9,900 | Western Union | ⚠️ Just below threshold |
-| Jan 19 | $9,700 | MoneyGram | ⚠️ Just below threshold |
-| ... | ... | ... | ... |
-
-**Pattern Indicators:**
-- All transactions between $9,500-$9,900 (just below $10,000 reporting threshold)
-- Multiple transactions split across same-day sessions
-- Consistent use of money service businesses (MSBs)
-- Total 7-day volume 340% above historical average
-
-**AML Risk Score: 89 (Critical)**
-
-This pattern is consistent with **structured transactions to evade CTR filing requirements**. Recommend escalation to Compliance for SAR consideration.
-
-Shall I draft a SAR narrative for this case?`;
-      } else if (input.toLowerCase().includes('sar') || input.toLowerCase().includes('draft')) {
-        response = `**Draft SAR Narrative - CASE-B9K2M**
-
----
-
-**SUSPICIOUS ACTIVITY REPORT - DRAFT**
-*Generated by SentinelAI | Subject to Analyst Review*
-
-**Subject Information:**
-- Customer ID: CUST-4521
-- Account: ****7834
-- Investigation Period: January 13-22, 2025
-
-**Summary of Suspicious Activity:**
-
-Between January 13 and January 22, 2025, [FINANCIAL INSTITUTION] identified suspicious transaction activity associated with account ending in 7834, held by [CUSTOMER NAME]. The activity involves a series of structured transactions that appear designed to evade Currency Transaction Report (CTR) filing requirements.
-
-**Description of Activity:**
-
-During the relevant period, the subject conducted 12 transactions totaling $113,400. Each individual transaction ranged from $9,500 to $9,900, consistently falling just below the $10,000 CTR reporting threshold. The transactions exhibited the following characteristics:
-
-1. Multiple same-day transactions split across different money service businesses
-2. Consistent transaction amounts hovering between 95-99% of the reporting threshold
-3. Transaction volume representing a 340% increase over the customer's historical baseline
-4. No apparent legitimate business purpose identified
-
-**Conclusion:**
-
-Based on the patterns identified, this activity is consistent with structuring as defined under 31 CFR 1010.100(xx). The case has been escalated for further investigation.
-
----
-
-⚠️ **Note**: This is a draft narrative. Please review and edit before submission to FinCEN. All facts should be verified against source documentation.
-
-Would you like me to add supporting evidence or modify any section?`;
-      } else {
-        response = `I understand you're asking about "${input}". 
-
-Based on my analysis of your platform data, here's what I can tell you:
-
-**Current System Status:**
-- Active Alerts: 47 pending review
-- Open Cases: 12 in investigation
-- Today's Transactions: 3,456 processed
-- Fraud Detection Rate: 94.5%
-
-**Top Patterns This Week:**
-1. Velocity abuse (23 alerts)
-2. Geographic anomalies (18 alerts)
-3. New device + high value (12 alerts)
-
-Is there a specific transaction, customer, or case you'd like me to analyze in detail?`;
-      }
-      
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: response,
-        timestamp: new Date()
-      };
-      
-      setMessages(prev => [...prev, assistantMessage]);
-      setIsLoading(false);
-    }, 1500);
+    await sendMessage(message);
   };
   
   return (
@@ -193,83 +63,113 @@ Is there a specific transaction, customer, or case you'd like me to analyze in d
             <Sparkles className="h-6 w-6 text-primary" />
             AI Investigation Assistant
           </h1>
-          <p className="text-muted-foreground">Powered by RAG-based analysis of your transaction data</p>
+          <p className="text-muted-foreground">Powered by advanced AI for fraud analysis</p>
         </div>
-        <Badge variant="outline" className="border-primary/30 text-primary">
-          <span className="w-2 h-2 rounded-full bg-primary mr-2 animate-pulse" />
-          Connected
-        </Badge>
+        <div className="flex items-center gap-2">
+          {messages.length > 0 && (
+            <Button variant="outline" size="sm" onClick={clearMessages}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Clear Chat
+            </Button>
+          )}
+          <Badge variant="outline" className="border-primary/30 text-primary">
+            <span className="w-2 h-2 rounded-full bg-primary mr-2 animate-pulse" />
+            Connected
+          </Badge>
+        </div>
       </div>
       
       {/* Chat container */}
       <div className="flex-1 flex gap-4 min-h-0">
         {/* Messages */}
         <div className="flex-1 flex flex-col stat-card p-0 overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={cn(
-                  'flex gap-3',
-                  message.role === 'user' && 'flex-row-reverse'
-                )}
-              >
-                <div className={cn(
-                  'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
-                  message.role === 'assistant' ? 'bg-primary/20' : 'bg-muted'
-                )}>
-                  {message.role === 'assistant' ? (
-                    <Sparkles className="h-4 w-4 text-primary" />
-                  ) : (
-                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                  )}
+          <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+            {messages.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center py-8">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                  <Bot className="h-8 w-8 text-primary" />
                 </div>
-                <div className={cn(
-                  'flex-1 rounded-lg p-4 max-w-[80%]',
-                  message.role === 'assistant' 
-                    ? 'bg-muted/50 border border-border' 
-                    : 'bg-primary/10 border border-primary/20 ml-auto'
-                )}>
-                  <div className="prose prose-sm max-w-none text-foreground">
-                    {message.content.split('\n').map((line, i) => (
-                      <p key={i} className="mb-2 last:mb-0 text-sm whitespace-pre-wrap">
-                        {line}
-                      </p>
-                    ))}
-                  </div>
-                  <p className="text-[10px] text-muted-foreground mt-2">
-                    {message.timestamp.toLocaleTimeString()}
-                  </p>
+                <h2 className="text-lg font-semibold mb-2">How can I help you today?</h2>
+                <p className="text-muted-foreground text-center max-w-md text-sm mb-6">
+                  I can help you analyze transactions, explain risk scores, 
+                  identify fraud patterns, and draft SAR narratives.
+                </p>
+                <div className="grid grid-cols-1 gap-2 w-full max-w-md">
+                  {suggestedQueries.slice(0, 3).map((query, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setInput(query)}
+                      className="text-left text-sm p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all"
+                    >
+                      {query}
+                    </button>
+                  ))}
                 </div>
               </div>
-            ))}
-            
-            {isLoading && (
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                  <Loader2 className="h-4 w-4 text-primary animate-spin" />
-                </div>
-                <div className="bg-muted/50 border border-border rounded-lg p-4">
-                  <p className="text-sm text-muted-foreground">Analyzing your request...</p>
-                </div>
+            ) : (
+              <div className="space-y-4">
+                {messages.map((message, index) => (
+                  <div
+                    key={index}
+                    className={cn(
+                      'flex gap-3',
+                      message.role === 'user' && 'flex-row-reverse'
+                    )}
+                  >
+                    <div className={cn(
+                      'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
+                      message.role === 'assistant' ? 'bg-primary/20' : 'bg-muted'
+                    )}>
+                      {message.role === 'assistant' ? (
+                        <Bot className="h-4 w-4 text-primary" />
+                      ) : (
+                        <User className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className={cn(
+                      'flex-1 rounded-lg p-4 max-w-[80%]',
+                      message.role === 'assistant' 
+                        ? 'bg-muted/50 border border-border' 
+                        : 'bg-primary/10 border border-primary/20 ml-auto'
+                    )}>
+                      <div className="prose prose-sm max-w-none text-foreground whitespace-pre-wrap text-sm">
+                        {message.content || (
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Thinking...
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
-          </div>
+          </ScrollArea>
           
           {/* Input */}
           <div className="p-4 border-t border-border">
-            <div className="flex gap-2">
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSend();
+              }}
+              className="flex gap-2"
+            >
               <Input
                 placeholder="Ask about transactions, patterns, or cases..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                 disabled={isLoading}
               />
-              <Button onClick={handleSend} disabled={isLoading || !input.trim()}>
-                <Send className="h-4 w-4" />
+              <Button type="submit" disabled={isLoading || !input.trim()}>
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
               </Button>
-            </div>
+            </form>
           </div>
         </div>
         
