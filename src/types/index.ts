@@ -1,4 +1,4 @@
-// Core Entity Types for SentinelAI
+// Core Entity Types for SnapGuard
 
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 export type AlertStatus = 'open' | 'under_investigation' | 'escalated' | 'closed';
