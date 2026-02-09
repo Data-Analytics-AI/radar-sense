@@ -1,69 +1,110 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Activity, Pause, Play, Filter, RefreshCw } from 'lucide-react';
+import { 
+  Activity, Pause, Play, Filter, RefreshCw, 
+  Gauge, ShieldAlert, Ban, TrendingUp, TrendingDown,
+  ChevronDown, ChevronUp, Briefcase, Info
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RiskScoreBadge } from '@/components/dashboard/RiskScoreBadge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { generateTransactions, generateHourlyData } from '@/lib/mock-data';
 import { Transaction } from '@/types';
 import { cn } from '@/lib/utils';
 import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, 
+  Tooltip as RechartsTooltip, ResponsiveContainer, 
+  ComposedChart, Bar
 } from 'recharts';
+
+// Fraud Pressure Index calculation
+const calcFraudPressure = (txns: Transaction[]) => {
+  if (!txns.length) return 0;
+  const highRiskCount = txns.filter(t => t.riskLevel === 'high' || t.riskLevel === 'critical').length;
+  const avgRisk = txns.reduce((s, t) => s + t.riskScore, 0) / txns.length;
+  const declinedRate = txns.filter(t => t.status === 'declined').length / txns.length;
+  return Math.min(100, Math.round((highRiskCount / txns.length) * 40 + avgRisk * 0.4 + declinedRate * 20));
+};
+
+const riskDriverLabels: Record<string, string> = {
+  velocity: 'Velocity',
+  geo: 'Geography',
+  device: 'Device',
+  amount: 'Amount',
+};
+
+const getRiskDrivers = (txn: Transaction) => {
+  const drivers: string[] = [];
+  if (txn.amount > 5000) drivers.push('amount');
+  if (txn.rulesTriggered.some(r => r.toLowerCase().includes('velocity'))) drivers.push('velocity');
+  if (txn.rulesTriggered.some(r => r.toLowerCase().includes('geo') || r.toLowerCase().includes('location') || r.toLowerCase().includes('country'))) drivers.push('geo');
+  if (txn.rulesTriggered.some(r => r.toLowerCase().includes('device'))) drivers.push('device');
+  if (!drivers.length && txn.riskLevel !== 'low') drivers.push('amount');
+  return drivers;
+};
+
+const liveInsights = [
+  { text: '3 merchants showing abnormal spend velocity in the last 30 minutes', severity: 'high' as const },
+  { text: 'New country detected for 12 customers compared to 7-day baseline', severity: 'medium' as const },
+  { text: 'Increase in emulator-based mobile transactions (up 18% vs. hourly avg)', severity: 'high' as const },
+  { text: 'Wire transfer volume elevated 2.1x above normal for this time window', severity: 'medium' as const },
+  { text: 'Card-testing pattern detected across 2 merchant endpoints', severity: 'critical' as const },
+];
 
 const LiveMonitoring = () => {
   const [isLive, setIsLive] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [stats, setStats] = useState({
-    perMinute: 0,
-    highRisk: 0,
-    blocked: 0
-  });
-  
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [showHighRiskOverlay, setShowHighRiskOverlay] = useState(false);
+  const [velocity, setVelocity] = useState(0);
+  const [velocityTrend, setVelocityTrend] = useState(0);
+  const [blockedValue, setBlockedValue] = useState(0);
+
   const initialTransactions = useMemo(() => generateTransactions(50), []);
-  const hourlyData = useMemo(() => generateHourlyData(24), []);
-  
+  const hourlyData = useMemo(() => {
+    const base = generateHourlyData(24);
+    return base.map(d => ({
+      ...d,
+      highRiskPct: Math.round(Math.random() * 15 + 5),
+    }));
+  }, []);
+
   useEffect(() => {
     setTransactions(initialTransactions.slice(0, 20));
-    
+    setVelocity(Math.floor(Math.random() * 50) + 110);
+    setBlockedValue(Math.round(Math.random() * 50000 + 15000));
+
     if (!isLive) return;
-    
+
     const interval = setInterval(() => {
       const newTxn = generateTransactions(1)[0];
       setTransactions(prev => [newTxn, ...prev.slice(0, 19)]);
-      
-      // Update stats
-      setStats(prev => ({
-        perMinute: Math.floor(Math.random() * 50) + 100,
-        highRisk: prev.highRisk + (newTxn.riskLevel === 'high' || newTxn.riskLevel === 'critical' ? 1 : 0),
-        blocked: prev.blocked + (newTxn.status === 'declined' ? 1 : 0)
-      }));
+      setVelocity(Math.floor(Math.random() * 50) + 110);
+      setVelocityTrend(parseFloat((Math.random() * 10 - 5).toFixed(1)));
+      if (newTxn.status === 'declined') {
+        setBlockedValue(prev => prev + newTxn.amount);
+      }
     }, 2000);
-    
+
     return () => clearInterval(interval);
   }, [isLive, initialTransactions]);
-  
-  const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2
-    }).format(amount);
-  };
-  
-  const formatTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-  };
-  
+
+  const fraudPressure = useMemo(() => calcFraudPressure(transactions), [transactions]);
+
+  const riskDistribution = useMemo(() => {
+    const dist = { low: 0, medium: 0, high: 0, critical: 0 };
+    transactions.forEach(t => dist[t.riskLevel]++);
+    return dist;
+  }, [transactions]);
+
+  const formatAmount = (amount: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(amount);
+
+  const formatTime = (timestamp: string) =>
+    new Date(timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  const pressureColor = fraudPressure < 30 ? 'text-success' : fraudPressure < 60 ? 'text-warning' : 'text-destructive';
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -73,124 +114,156 @@ const LiveMonitoring = () => {
             Live Monitoring
             {isLive && (
               <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-success"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-success" />
               </span>
             )}
           </h1>
-          <p className="text-muted-foreground">Real-time transaction stream and monitoring</p>
+          <p className="text-muted-foreground">Real-time transaction stream and risk situational awareness</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant={isLive ? "default" : "outline"}
-            size="sm"
-            onClick={() => setIsLive(!isLive)}
-          >
-            {isLive ? (
-              <>
-                <Pause className="h-4 w-4 mr-2" />
-                Pause
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4 mr-2" />
-                Resume
-              </>
-            )}
+          <Button variant={isLive ? 'default' : 'outline'} size="sm" onClick={() => setIsLive(!isLive)}>
+            {isLive ? <><Pause className="h-4 w-4 mr-2" />Pause</> : <><Play className="h-4 w-4 mr-2" />Resume</>}
           </Button>
-          <Button variant="outline" size="sm">
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
-          </Button>
-          <Button variant="outline" size="icon">
-            <RefreshCw className="h-4 w-4" />
-          </Button>
+          <Button variant="outline" size="sm"><Filter className="h-4 w-4 mr-2" />Filter</Button>
+          <Button variant="outline" size="icon"><RefreshCw className="h-4 w-4" /></Button>
         </div>
       </div>
-      
-      {/* Live stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="stat-card flex items-center gap-4">
-          <div className="p-3 rounded-lg bg-primary/10">
-            <Activity className="h-6 w-6 text-primary" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold">{stats.perMinute}</p>
-            <p className="text-xs text-muted-foreground">Transactions/min</p>
-          </div>
-        </div>
-        <div className="stat-card flex items-center gap-4">
-          <div className="p-3 rounded-lg bg-success/10">
-            <Activity className="h-6 w-6 text-success" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold">{transactions.filter(t => t.riskLevel === 'low').length}</p>
-            <p className="text-xs text-muted-foreground">Low Risk (last 20)</p>
+
+      {/* Smart KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Transaction Velocity */}
+        <div className="stat-card">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">Transaction Velocity</p>
+              <p className="text-3xl font-bold tracking-tight">{velocity}<span className="text-sm font-normal text-muted-foreground">/min</span></p>
+              <div className={cn('flex items-center gap-1 text-xs font-medium', velocityTrend >= 0 ? 'text-success' : 'text-destructive')}>
+                {velocityTrend >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                <span>{Math.abs(velocityTrend)}%</span>
+                <span className="text-muted-foreground">vs. 1h avg</span>
+              </div>
+            </div>
+            <div className="p-3 rounded-lg bg-primary/10"><Activity className="h-5 w-5 text-primary" /></div>
           </div>
         </div>
-        <div className="stat-card flex items-center gap-4">
-          <div className="p-3 rounded-lg bg-warning/10">
-            <Activity className="h-6 w-6 text-warning" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold">{transactions.filter(t => t.riskLevel === 'high' || t.riskLevel === 'critical').length}</p>
-            <p className="text-xs text-muted-foreground">High Risk (last 20)</p>
+
+        {/* Risk Distribution */}
+        <div className="stat-card">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">Risk Distribution</p>
+              <div className="flex items-center gap-3 mt-1">
+                <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-success" /><span className="text-xs font-semibold">{riskDistribution.low}</span></div>
+                <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-warning" /><span className="text-xs font-semibold">{riskDistribution.medium}</span></div>
+                <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-500" /><span className="text-xs font-semibold">{riskDistribution.high}</span></div>
+                <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-destructive" /><span className="text-xs font-semibold">{riskDistribution.critical}</span></div>
+              </div>
+              {/* Mini bar */}
+              <div className="flex h-2 rounded-full overflow-hidden mt-2">
+                <div className="bg-success" style={{ width: `${(riskDistribution.low / 20) * 100}%` }} />
+                <div className="bg-warning" style={{ width: `${(riskDistribution.medium / 20) * 100}%` }} />
+                <div className="bg-orange-500" style={{ width: `${(riskDistribution.high / 20) * 100}%` }} />
+                <div className="bg-destructive" style={{ width: `${(riskDistribution.critical / 20) * 100}%` }} />
+              </div>
+            </div>
+            <div className="p-3 rounded-lg bg-warning/10"><ShieldAlert className="h-5 w-5 text-warning" /></div>
           </div>
         </div>
-        <div className="stat-card flex items-center gap-4">
-          <div className="p-3 rounded-lg bg-destructive/10">
-            <Activity className="h-6 w-6 text-destructive" />
+
+        {/* Fraud Pressure Index */}
+        <div className="stat-card">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center gap-1">
+                <p className="text-sm font-medium text-muted-foreground">Fraud Pressure Index</p>
+                <Tooltip delayDuration={200}>
+                  <TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger>
+                  <TooltipContent className="max-w-[220px] text-xs">Composite score (0-100) based on high-risk ratio, avg risk score, and decline rate.</TooltipContent>
+                </Tooltip>
+              </div>
+              <p className={cn('text-3xl font-bold tracking-tight', pressureColor)}>{fraudPressure}</p>
+              <p className="text-xs text-muted-foreground">{fraudPressure < 30 ? 'Normal' : fraudPressure < 60 ? 'Elevated' : 'High'} pressure</p>
+            </div>
+            <div className={cn('p-3 rounded-lg', fraudPressure < 30 ? 'bg-success/10' : fraudPressure < 60 ? 'bg-warning/10' : 'bg-destructive/10')}>
+              <Gauge className={cn('h-5 w-5', pressureColor)} />
+            </div>
           </div>
-          <div>
-            <p className="text-2xl font-bold">{transactions.filter(t => t.status === 'declined').length}</p>
-            <p className="text-xs text-muted-foreground">Blocked (last 20)</p>
+        </div>
+
+        {/* Blocked Value */}
+        <div className="stat-card">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">Blocked Value</p>
+              <p className="text-3xl font-bold tracking-tight">{formatAmount(blockedValue)}</p>
+              <p className="text-xs text-muted-foreground">Loss prevented this session</p>
+            </div>
+            <div className="p-3 rounded-lg bg-destructive/10"><Ban className="h-5 w-5 text-destructive" /></div>
           </div>
         </div>
       </div>
-      
-      {/* Intraday chart */}
-      <div className="stat-card h-[200px]">
-        <h3 className="text-sm font-medium text-muted-foreground mb-4">Transaction Volume (Last 24h)</h3>
-        <ResponsiveContainer width="100%" height="80%">
-          <AreaChart data={hourlyData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-            <defs>
-              <linearGradient id="gradient-volume" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
-                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
-            <XAxis 
-              dataKey="label" 
-              axisLine={false} 
-              tickLine={false}
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
-              interval={3}
-            />
-            <YAxis 
-              axisLine={false} 
-              tickLine={false}
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'hsl(var(--popover))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '8px'
-              }}
-            />
-            <Area
-              type="monotone"
-              dataKey="value"
-              stroke="hsl(var(--primary))"
-              strokeWidth={2}
-              fill="url(#gradient-volume)"
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+
+      {/* Chart + Insights */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        {/* Volume Chart */}
+        <div className="stat-card xl:col-span-2">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-muted-foreground">Transaction Volume (Last 24h)</h3>
+            <Button
+              variant={showHighRiskOverlay ? 'default' : 'outline'}
+              size="sm"
+              className="text-xs h-7"
+              onClick={() => setShowHighRiskOverlay(!showHighRiskOverlay)}
+            >
+              {showHighRiskOverlay ? 'Volume + High-Risk %' : 'Volume Only'}
+            </Button>
+          </div>
+          <div className="h-[200px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={hourlyData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                <defs>
+                  <linearGradient id="gradient-vol" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
+                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} interval={3} />
+                <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
+                {showHighRiskOverlay && (
+                  <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--destructive))', fontSize: 10 }} unit="%" />
+                )}
+                <RechartsTooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }} />
+                <Area yAxisId="left" type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#gradient-vol)" name="Volume" />
+                {showHighRiskOverlay && (
+                  <Bar yAxisId="right" dataKey="highRiskPct" fill="hsl(var(--destructive))" opacity={0.3} name="High-Risk %" />
+                )}
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Live Insights Panel */}
+        <div className="stat-card">
+          <h3 className="text-sm font-medium text-muted-foreground mb-4">Live Insights</h3>
+          <div className="space-y-3">
+            {liveInsights.map((insight, i) => (
+              <div key={i} className="flex items-start gap-2 p-2.5 rounded-md border border-border bg-muted/20">
+                <span className={cn(
+                  'mt-1 flex-shrink-0 w-2 h-2 rounded-full',
+                  insight.severity === 'critical' && 'bg-destructive animate-pulse',
+                  insight.severity === 'high' && 'bg-orange-500',
+                  insight.severity === 'medium' && 'bg-warning',
+                )} />
+                <p className="text-xs text-foreground leading-relaxed">{insight.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-      
-      {/* Transaction feed */}
+
+      {/* Transaction Stream */}
       <div className="stat-card">
         <h3 className="text-sm font-medium text-muted-foreground mb-4">Live Transaction Stream</h3>
         <div className="overflow-x-auto">
@@ -203,59 +276,93 @@ const LiveMonitoring = () => {
                 <th>Amount</th>
                 <th>Merchant</th>
                 <th>Channel</th>
-                <th>Location</th>
-                <th>Risk Score</th>
+                <th>Risk Drivers</th>
+                <th>Confidence</th>
+                <th>Rules Hit</th>
+                <th>Risk</th>
                 <th>Status</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
-              {transactions.map((txn, index) => (
-                <tr 
-                  key={txn.id} 
-                  className={cn(
-                    'transition-all duration-300',
-                    index === 0 && isLive && 'bg-primary/5'
-                  )}
-                >
-                  <td className="font-mono text-xs text-muted-foreground">
-                    {formatTime(txn.timestamp)}
-                  </td>
-                  <td className="font-mono text-xs">{txn.id}</td>
-                  <td className="font-mono text-xs">{txn.customerId}</td>
-                  <td className={cn(
-                    'font-semibold',
-                    txn.amount > 5000 && 'text-warning',
-                    txn.amount > 10000 && 'text-destructive'
-                  )}>
-                    {formatAmount(txn.amount)}
-                  </td>
-                  <td className="text-sm">{txn.merchantName}</td>
-                  <td>
-                    <Badge variant="outline" className="text-xs capitalize">
-                      {txn.channel}
-                    </Badge>
-                  </td>
-                  <td className="text-xs text-muted-foreground">
-                    {txn.geoLocation.city}, {txn.geoLocation.country}
-                  </td>
-                  <td>
-                    <RiskScoreBadge score={txn.riskScore} level={txn.riskLevel} size="sm" />
-                  </td>
-                  <td>
-                    <Badge 
-                      variant="outline"
+              {transactions.map((txn, index) => {
+                const drivers = getRiskDrivers(txn);
+                const isExpanded = expandedRow === txn.id;
+                return (
+                  <>
+                    <tr
+                      key={txn.id}
                       className={cn(
-                        'text-xs capitalize',
-                        txn.status === 'completed' && 'border-success/30 text-success',
-                        txn.status === 'pending' && 'border-warning/30 text-warning',
-                        txn.status === 'declined' && 'border-destructive/30 text-destructive'
+                        'transition-all duration-300 cursor-pointer',
+                        index === 0 && isLive && 'bg-primary/5',
+                        isExpanded && 'bg-muted/30'
                       )}
+                      onClick={() => setExpandedRow(isExpanded ? null : txn.id)}
                     >
-                      {txn.status}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
+                      <td className="font-mono text-xs text-muted-foreground">{formatTime(txn.timestamp)}</td>
+                      <td className="font-mono text-xs">{txn.id}</td>
+                      <td className="font-mono text-xs">{txn.customerId}</td>
+                      <td className={cn('font-semibold', txn.amount > 5000 && 'text-warning', txn.amount > 10000 && 'text-destructive')}>
+                        {formatAmount(txn.amount)}
+                      </td>
+                      <td className="text-sm">{txn.merchantName}</td>
+                      <td><Badge variant="outline" className="text-xs capitalize">{txn.channel}</Badge></td>
+                      <td>
+                        <div className="flex gap-1 flex-wrap">
+                          {drivers.map(d => (
+                            <Badge key={d} variant="outline" className="text-[10px] capitalize px-1.5 py-0">{riskDriverLabels[d] || d}</Badge>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="text-xs font-mono">{(txn.mlProbability * 100).toFixed(0)}%</td>
+                      <td className="text-xs font-mono">{txn.rulesTriggered.length}</td>
+                      <td><RiskScoreBadge score={txn.riskScore} level={txn.riskLevel} size="sm" /></td>
+                      <td>
+                        <Badge variant="outline" className={cn('text-xs capitalize',
+                          txn.status === 'completed' && 'border-success/30 text-success',
+                          txn.status === 'pending' && 'border-warning/30 text-warning',
+                          txn.status === 'declined' && 'border-destructive/30 text-destructive'
+                        )}>{txn.status}</Badge>
+                      </td>
+                      <td>{isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}</td>
+                    </tr>
+                    {isExpanded && (
+                      <tr key={`${txn.id}-detail`} className="bg-muted/20">
+                        <td colSpan={12} className="p-4">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                            <div className="space-y-2">
+                              <p className="font-semibold text-foreground text-sm">Why Flagged</p>
+                              {txn.rulesTriggered.length > 0 ? (
+                                <ul className="space-y-1 text-muted-foreground">
+                                  {txn.rulesTriggered.map((r, i) => <li key={i} className="flex items-start gap-1.5"><span className="text-destructive mt-0.5">-</span>{r}</li>)}
+                                </ul>
+                              ) : (
+                                <p className="text-muted-foreground">No rules triggered. Risk within normal range.</p>
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <p className="font-semibold text-foreground text-sm">Transaction Details</p>
+                              <div className="space-y-1 text-muted-foreground">
+                                <p>Device: {txn.deviceId}</p>
+                                <p>IP: {txn.ipAddress}</p>
+                                <p>Location: {txn.geoLocation.city}, {txn.geoLocation.country}</p>
+                                <p>Card: {txn.cardNumberMasked}</p>
+                                <p>Anomaly Score: {txn.anomalyScore.toFixed(2)}</p>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <p className="font-semibold text-foreground text-sm">Actions</p>
+                              <Button size="sm" variant="outline" className="text-xs">
+                                <Briefcase className="h-3 w-3 mr-1" />Create Case
+                              </Button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                );
+              })}
             </tbody>
           </table>
         </div>
