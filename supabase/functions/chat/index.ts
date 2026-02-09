@@ -29,7 +29,7 @@ serve(async (req) => {
         messages: [
           { 
             role: "system", 
-            content: `You are SnapGuard, an advanced fraud detection and AML investigation assistant for financial services institutions.
+            content: `You are SnapFort, an advanced fraud detection and AML investigation assistant for financial services institutions.
 
 Your capabilities include:
 - Analyzing transaction patterns and identifying suspicious activities
