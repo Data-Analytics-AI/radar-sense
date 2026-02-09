@@ -1,9 +1,10 @@
 import { ReactNode } from 'react';
+import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 
 interface LayoutProps {
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 export const Layout = ({ children }: LayoutProps) => {
@@ -14,7 +15,7 @@ export const Layout = ({ children }: LayoutProps) => {
         <Header />
         <main className="flex-1 overflow-y-auto bg-background">
           <div className="p-6">
-            {children}
+            {children || <Outlet />}
           </div>
         </main>
       </div>

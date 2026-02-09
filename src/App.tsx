@@ -16,6 +16,7 @@ import Graph from "./pages/Graph";
 import AIAssistant from "./pages/AIAssistant";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
+import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,8 +27,9 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Layout>
-          <Routes>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/monitoring" element={<LiveMonitoring />} />
             <Route path="/alerts" element={<Alerts />} />
@@ -40,9 +42,9 @@ const App = () => (
             <Route path="/ai-assistant" element={<AIAssistant />} />
             <Route path="/users" element={<Users />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Layout>
+          </Route>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

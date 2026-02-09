@@ -1,4 +1,4 @@
-// Core Entity Types for SnapGuard
+// Core Entity Types for SnapFort
 
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 export type AlertStatus = 'open' | 'under_investigation' | 'escalated' | 'closed';

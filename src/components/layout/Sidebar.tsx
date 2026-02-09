@@ -132,7 +132,7 @@ export const Sidebar = () => {
       'h-screen bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300',
       collapsed ? 'w-[68px]' : 'w-64'
     )}>
-      {/* Logo Section - Snapnet + SnapGuard */}
+      {/* Logo Section - Snapnet + SnapFort */}
       <div className={cn(
         'h-20 border-b border-sidebar-border flex items-center px-4',
         collapsed && 'justify-center px-2'
@@ -150,7 +150,7 @@ export const Sidebar = () => {
             <div className="flex items-center gap-2">
               <div className="h-8 w-px bg-border"></div>
               <div>
-                <h1 className="font-bold text-foreground tracking-tight text-sm">SnapGuard</h1>
+                <h1 className="font-bold text-foreground tracking-tight text-sm">SnapFort</h1>
                 <p className="text-[9px] text-muted-foreground -mt-0.5">Fraud Detection</p>
               </div>
             </div>
