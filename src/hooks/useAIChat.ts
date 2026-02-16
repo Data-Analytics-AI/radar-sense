@@ -13,8 +13,6 @@ export function useAIChat(options: UseAIChatOptions = {}) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
-
   const sendMessage = useCallback(async (input: string) => {
     const userMsg: Message = { role: 'user', content: input };
     setMessages(prev => [...prev, userMsg]);
@@ -23,11 +21,10 @@ export function useAIChat(options: UseAIChatOptions = {}) {
     let assistantContent = '';
 
     try {
-      const response = await fetch(CHAT_URL, {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({ messages: [...messages, userMsg] }),
       });
@@ -38,8 +35,6 @@ export function useAIChat(options: UseAIChatOptions = {}) {
         
         if (response.status === 429) {
           options.onError?.('Rate limit exceeded. Please wait a moment and try again.');
-        } else if (response.status === 402) {
-          options.onError?.('AI credits exhausted. Please add credits to continue using the assistant.');
         } else {
           options.onError?.(errorMessage);
         }
@@ -57,7 +52,6 @@ export function useAIChat(options: UseAIChatOptions = {}) {
       let textBuffer = '';
       let streamDone = false;
 
-      // Add empty assistant message to update
       setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
       while (!streamDone) {
@@ -102,7 +96,6 @@ export function useAIChat(options: UseAIChatOptions = {}) {
         }
       }
 
-      // Final flush
       if (textBuffer.trim()) {
         for (let raw of textBuffer.split('\n')) {
           if (!raw) continue;
@@ -134,7 +127,7 @@ export function useAIChat(options: UseAIChatOptions = {}) {
     } finally {
       setIsLoading(false);
     }
-  }, [messages, CHAT_URL, options]);
+  }, [messages, options]);
 
   const clearMessages = useCallback(() => {
     setMessages([]);
