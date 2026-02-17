@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { 
   Activity, Pause, Play, Filter, RefreshCw, 
   Gauge, ShieldAlert, Ban, TrendingUp, TrendingDown,
-  ChevronDown, ChevronUp, Briefcase, Info
+  ChevronRight, Info
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,8 +16,10 @@ import {
   Tooltip as RechartsTooltip, ResponsiveContainer, 
   ComposedChart, Bar
 } from 'recharts';
+import { useDetailsSelection } from '@/hooks/useDetailsSelection';
+import { DetailsDrawer } from '@/components/DetailsDrawer';
+import { TransactionDetailsPanel } from '@/components/TransactionDetailsPanel';
 
-// Fraud Pressure Index calculation
 const calcFraudPressure = (txns: Transaction[]) => {
   if (!txns.length) return 0;
   const highRiskCount = txns.filter(t => t.riskLevel === 'high' || t.riskLevel === 'critical').length;
@@ -27,10 +29,7 @@ const calcFraudPressure = (txns: Transaction[]) => {
 };
 
 const riskDriverLabels: Record<string, string> = {
-  velocity: 'Velocity',
-  geo: 'Geography',
-  device: 'Device',
-  amount: 'Amount',
+  velocity: 'Velocity', geo: 'Geography', device: 'Device', amount: 'Amount',
 };
 
 const getRiskDrivers = (txn: Transaction) => {
@@ -54,11 +53,12 @@ const liveInsights = [
 const LiveMonitoring = () => {
   const [isLive, setIsLive] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [showHighRiskOverlay, setShowHighRiskOverlay] = useState(false);
   const [velocity, setVelocity] = useState(0);
   const [velocityTrend, setVelocityTrend] = useState(0);
   const [blockedValue, setBlockedValue] = useState(0);
+  const [cachedSelection, setCachedSelection] = useState<Transaction | null>(null);
+  const { selectedId, isOpen, select, deselect } = useDetailsSelection('selected');
 
   const initialTransactions = useMemo(() => generateTransactions(50), []);
   const hourlyData = useMemo(() => {
@@ -89,6 +89,24 @@ const LiveMonitoring = () => {
     return () => clearInterval(interval);
   }, [isLive, initialTransactions]);
 
+  const selectedTransaction = useMemo(() => {
+    if (!selectedId) return null;
+    const found = transactions.find(t => t.id === selectedId);
+    if (found) return found;
+    return cachedSelection;
+  }, [selectedId, transactions, cachedSelection]);
+
+  useEffect(() => {
+    if (!selectedId) {
+      setCachedSelection(null);
+      return;
+    }
+    const found = transactions.find(t => t.id === selectedId);
+    if (found) {
+      setCachedSelection(found);
+    }
+  }, [selectedId, transactions]);
+
   const fraudPressure = useMemo(() => calcFraudPressure(transactions), [transactions]);
 
   const riskDistribution = useMemo(() => {
@@ -105,9 +123,24 @@ const LiveMonitoring = () => {
 
   const pressureColor = fraudPressure < 30 ? 'text-success' : fraudPressure < 60 ? 'text-warning' : 'text-destructive';
 
+  const handleRowClick = (txnId: string) => {
+    select(txnId);
+  };
+
+  const handleChevronClick = (e: React.MouseEvent, txnId: string) => {
+    e.stopPropagation();
+    select(txnId);
+  };
+
+  const handleRowKeyDown = (e: React.KeyboardEvent, txnId: string) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      select(txnId);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-3">
@@ -122,17 +155,15 @@ const LiveMonitoring = () => {
           <p className="text-muted-foreground">Real-time transaction stream and risk situational awareness</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant={isLive ? 'default' : 'outline'} size="sm" onClick={() => setIsLive(!isLive)}>
+          <Button variant={isLive ? 'default' : 'outline'} size="sm" onClick={() => setIsLive(!isLive)} data-testid="button-toggle-live">
             {isLive ? <><Pause className="h-4 w-4 mr-2" />Pause</> : <><Play className="h-4 w-4 mr-2" />Resume</>}
           </Button>
-          <Button variant="outline" size="sm"><Filter className="h-4 w-4 mr-2" />Filter</Button>
-          <Button variant="outline" size="icon"><RefreshCw className="h-4 w-4" /></Button>
+          <Button variant="outline" size="sm" data-testid="button-filter"><Filter className="h-4 w-4 mr-2" />Filter</Button>
+          <Button variant="outline" size="icon" data-testid="button-refresh"><RefreshCw className="h-4 w-4" /></Button>
         </div>
       </div>
 
-      {/* Smart KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Transaction Velocity */}
         <div className="stat-card">
           <div className="flex items-start justify-between">
             <div className="space-y-1">
@@ -148,7 +179,6 @@ const LiveMonitoring = () => {
           </div>
         </div>
 
-        {/* Risk Distribution */}
         <div className="stat-card">
           <div className="flex items-start justify-between">
             <div className="space-y-1">
@@ -159,7 +189,6 @@ const LiveMonitoring = () => {
                 <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-500" /><span className="text-xs font-semibold">{riskDistribution.high}</span></div>
                 <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-destructive" /><span className="text-xs font-semibold">{riskDistribution.critical}</span></div>
               </div>
-              {/* Mini bar */}
               <div className="flex h-2 rounded-full overflow-hidden mt-2">
                 <div className="bg-success" style={{ width: `${(riskDistribution.low / 20) * 100}%` }} />
                 <div className="bg-warning" style={{ width: `${(riskDistribution.medium / 20) * 100}%` }} />
@@ -171,7 +200,6 @@ const LiveMonitoring = () => {
           </div>
         </div>
 
-        {/* Fraud Pressure Index */}
         <div className="stat-card">
           <div className="flex items-start justify-between">
             <div className="space-y-1">
@@ -191,7 +219,6 @@ const LiveMonitoring = () => {
           </div>
         </div>
 
-        {/* Blocked Value */}
         <div className="stat-card">
           <div className="flex items-start justify-between">
             <div className="space-y-1">
@@ -204,9 +231,7 @@ const LiveMonitoring = () => {
         </div>
       </div>
 
-      {/* Chart + Insights */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        {/* Volume Chart */}
         <div className="stat-card xl:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-medium text-muted-foreground">Transaction Volume (Last 24h)</h3>
@@ -215,6 +240,7 @@ const LiveMonitoring = () => {
               size="sm"
               className="text-xs h-7"
               onClick={() => setShowHighRiskOverlay(!showHighRiskOverlay)}
+              data-testid="button-toggle-overlay"
             >
               {showHighRiskOverlay ? 'Volume + High-Risk %' : 'Volume Only'}
             </Button>
@@ -244,7 +270,6 @@ const LiveMonitoring = () => {
           </div>
         </div>
 
-        {/* Live Insights Panel */}
         <div className="stat-card">
           <h3 className="text-sm font-medium text-muted-foreground mb-4">Live Insights</h3>
           <div className="space-y-3">
@@ -263,7 +288,6 @@ const LiveMonitoring = () => {
         </div>
       </div>
 
-      {/* Transaction Stream */}
       <div className="stat-card">
         <h3 className="text-sm font-medium text-muted-foreground mb-4">Live Transaction Stream</h3>
         <div className="overflow-x-auto">
@@ -281,92 +305,83 @@ const LiveMonitoring = () => {
                 <th>Rules Hit</th>
                 <th>Risk</th>
                 <th>Status</th>
-                <th></th>
+                <th className="w-10"></th>
               </tr>
             </thead>
             <tbody>
               {transactions.map((txn, index) => {
                 const drivers = getRiskDrivers(txn);
-                const isExpanded = expandedRow === txn.id;
+                const isSelected = selectedId === txn.id;
                 return (
-                  <>
-                    <tr
-                      key={txn.id}
-                      className={cn(
-                        'transition-all duration-300 cursor-pointer',
-                        index === 0 && isLive && 'bg-primary/5',
-                        isExpanded && 'bg-muted/30'
-                      )}
-                      onClick={() => setExpandedRow(isExpanded ? null : txn.id)}
-                    >
-                      <td className="font-mono text-xs text-muted-foreground">{formatTime(txn.timestamp)}</td>
-                      <td className="font-mono text-xs">{txn.id}</td>
-                      <td className="font-mono text-xs">{txn.customerId}</td>
-                      <td className={cn('font-semibold', txn.amount > 5000 && 'text-warning', txn.amount > 10000 && 'text-destructive')}>
-                        {formatAmount(txn.amount)}
-                      </td>
-                      <td className="text-sm">{txn.merchantName}</td>
-                      <td><Badge variant="outline" className="text-xs capitalize">{txn.channel}</Badge></td>
-                      <td>
-                        <div className="flex gap-1 flex-wrap">
-                          {drivers.map(d => (
-                            <Badge key={d} variant="outline" className="text-[10px] capitalize px-1.5 py-0">{riskDriverLabels[d] || d}</Badge>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="text-xs font-mono">{(txn.mlProbability * 100).toFixed(0)}%</td>
-                      <td className="text-xs font-mono">{txn.rulesTriggered.length}</td>
-                      <td><RiskScoreBadge score={txn.riskScore} level={txn.riskLevel} size="sm" /></td>
-                      <td>
-                        <Badge variant="outline" className={cn('text-xs capitalize',
-                          txn.status === 'completed' && 'border-success/30 text-success',
-                          txn.status === 'pending' && 'border-warning/30 text-warning',
-                          txn.status === 'declined' && 'border-destructive/30 text-destructive'
-                        )}>{txn.status}</Badge>
-                      </td>
-                      <td>{isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}</td>
-                    </tr>
-                    {isExpanded && (
-                      <tr key={`${txn.id}-detail`} className="bg-muted/20">
-                        <td colSpan={12} className="p-4">
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                            <div className="space-y-2">
-                              <p className="font-semibold text-foreground text-sm">Why Flagged</p>
-                              {txn.rulesTriggered.length > 0 ? (
-                                <ul className="space-y-1 text-muted-foreground">
-                                  {txn.rulesTriggered.map((r, i) => <li key={i} className="flex items-start gap-1.5"><span className="text-destructive mt-0.5">-</span>{r}</li>)}
-                                </ul>
-                              ) : (
-                                <p className="text-muted-foreground">No rules triggered. Risk within normal range.</p>
-                              )}
-                            </div>
-                            <div className="space-y-2">
-                              <p className="font-semibold text-foreground text-sm">Transaction Details</p>
-                              <div className="space-y-1 text-muted-foreground">
-                                <p>Device: {txn.deviceId}</p>
-                                <p>IP: {txn.ipAddress}</p>
-                                <p>Location: {txn.geoLocation.city}, {txn.geoLocation.country}</p>
-                                <p>Card: {txn.cardNumberMasked}</p>
-                                <p>Anomaly Score: {txn.anomalyScore.toFixed(2)}</p>
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <p className="font-semibold text-foreground text-sm">Actions</p>
-                              <Button size="sm" variant="outline" className="text-xs">
-                                <Briefcase className="h-3 w-3 mr-1" />Create Case
-                              </Button>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
+                  <tr
+                    key={txn.id}
+                    className={cn(
+                      'transition-all duration-300 cursor-pointer',
+                      index === 0 && isLive && !isSelected && 'bg-primary/5',
+                      isSelected ? 'bg-primary/10' : 'hover:bg-muted/40'
                     )}
-                  </>
+                    onClick={() => handleRowClick(txn.id)}
+                    onKeyDown={(e) => handleRowKeyDown(e, txn.id)}
+                    tabIndex={0}
+                    role="button"
+                    aria-selected={isSelected}
+                    data-testid={`row-live-txn-${txn.id}`}
+                  >
+                    <td className="font-mono text-xs text-muted-foreground">{formatTime(txn.timestamp)}</td>
+                    <td className="font-mono text-xs">{txn.id}</td>
+                    <td className="font-mono text-xs">{txn.customerId}</td>
+                    <td className={cn('font-semibold', txn.amount > 5000 && 'text-warning', txn.amount > 10000 && 'text-destructive')}>
+                      {formatAmount(txn.amount)}
+                    </td>
+                    <td className="text-sm">{txn.merchantName}</td>
+                    <td><Badge variant="outline" className="text-xs capitalize">{txn.channel}</Badge></td>
+                    <td>
+                      <div className="flex gap-1 flex-wrap">
+                        {drivers.map(d => (
+                          <Badge key={d} variant="outline" className="text-[10px] capitalize px-1.5 py-0">{riskDriverLabels[d] || d}</Badge>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="text-xs font-mono">{(txn.mlProbability * 100).toFixed(0)}%</td>
+                    <td className="text-xs font-mono">{txn.rulesTriggered.length}</td>
+                    <td><RiskScoreBadge score={txn.riskScore} level={txn.riskLevel} size="sm" /></td>
+                    <td>
+                      <Badge variant="outline" className={cn('text-xs capitalize',
+                        txn.status === 'completed' && 'border-success/30 text-success',
+                        txn.status === 'pending' && 'border-warning/30 text-warning',
+                        txn.status === 'declined' && 'border-destructive/30 text-destructive'
+                      )}>{txn.status}</Badge>
+                    </td>
+                    <td>
+                      <button
+                        onClick={(e) => handleChevronClick(e, txn.id)}
+                        className="p-1 rounded-md hover:bg-muted transition-colors"
+                        aria-expanded={isSelected}
+                        aria-label={`View details for ${txn.id}`}
+                        data-testid={`button-chevron-live-${txn.id}`}
+                      >
+                        <ChevronRight className={cn(
+                          'h-4 w-4 text-muted-foreground transition-transform',
+                          isSelected && 'rotate-90'
+                        )} />
+                      </button>
+                    </td>
+                  </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
       </div>
+
+      <DetailsDrawer
+        open={isOpen && selectedTransaction !== null}
+        onOpenChange={(open) => { if (!open) deselect(); }}
+        title={selectedTransaction ? selectedTransaction.id : ''}
+        description="Transaction Details"
+      >
+        {selectedTransaction && <TransactionDetailsPanel transaction={selectedTransaction} />}
+      </DetailsDrawer>
     </div>
   );
 };

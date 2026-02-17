@@ -1,12 +1,8 @@
 import { useMemo, useState } from 'react';
 import { 
   AlertTriangle, 
-  Filter, 
   Search, 
-  ChevronDown, 
-  Eye,
-  UserPlus,
-  ArrowUpRight
+  ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,22 +14,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { RiskScoreBadge } from '@/components/dashboard/RiskScoreBadge';
 import { AlertStatusBadge } from '@/components/dashboard/AlertStatusBadge';
 import { generateTransactions, generateAlerts } from '@/lib/mock-data';
 import { Alert, AlertStatus } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useDetailsSelection } from '@/hooks/useDetailsSelection';
+import { DetailsDrawer } from '@/components/DetailsDrawer';
+import { AlertDetailsPanel } from '@/components/AlertDetailsPanel';
 
 const Alerts = () => {
   const [statusFilter, setStatusFilter] = useState<AlertStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const { selectedId, isOpen, select, deselect } = useDetailsSelection('selected');
   
   const alerts = useMemo(() => {
     const transactions = generateTransactions(100);
@@ -50,6 +44,11 @@ const Alerts = () => {
       return matchesStatus && matchesSearch;
     });
   }, [alerts, statusFilter, searchQuery]);
+
+  const selectedAlert = useMemo(() => {
+    if (!selectedId) return null;
+    return alerts.find(a => a.id === selectedId) || null;
+  }, [selectedId, alerts]);
   
   const statusCounts = useMemo(() => {
     return {
@@ -60,10 +59,25 @@ const Alerts = () => {
       closed: alerts.filter(a => a.status === 'closed').length,
     };
   }, [alerts]);
+
+  const handleRowClick = (alertId: string) => {
+    select(alertId);
+  };
+
+  const handleChevronClick = (e: React.MouseEvent, alertId: string) => {
+    e.stopPropagation();
+    select(alertId);
+  };
+
+  const handleRowKeyDown = (e: React.KeyboardEvent, alertId: string) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      select(alertId);
+    }
+  };
   
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
@@ -74,7 +88,6 @@ const Alerts = () => {
         </div>
       </div>
       
-      {/* Status tabs */}
       <div className="flex items-center gap-2 border-b border-border pb-4">
         {(['all', 'open', 'under_investigation', 'escalated', 'closed'] as const).map((status) => (
           <Button
@@ -83,6 +96,7 @@ const Alerts = () => {
             size="sm"
             onClick={() => setStatusFilter(status)}
             className="capitalize"
+            data-testid={`button-status-${status}`}
           >
             {status.replace('_', ' ')}
             <Badge 
@@ -98,8 +112,7 @@ const Alerts = () => {
         ))}
       </div>
       
-      {/* Filters */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -107,10 +120,11 @@ const Alerts = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
+            data-testid="input-search-alerts"
           />
         </div>
         <Select defaultValue="all">
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-[180px]" data-testid="select-alert-type">
             <SelectValue placeholder="Alert Type" />
           </SelectTrigger>
           <SelectContent>
@@ -122,7 +136,7 @@ const Alerts = () => {
           </SelectContent>
         </Select>
         <Select defaultValue="all">
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-[180px]" data-testid="select-severity">
             <SelectValue placeholder="Severity" />
           </SelectTrigger>
           <SelectContent>
@@ -135,7 +149,6 @@ const Alerts = () => {
         </Select>
       </div>
       
-      {/* Alerts table */}
       <div className="stat-card">
         <div className="overflow-x-auto">
           <table className="data-table">
@@ -149,69 +162,74 @@ const Alerts = () => {
                 <th>Status</th>
                 <th>Assigned To</th>
                 <th>Created</th>
-                <th>Actions</th>
+                <th className="w-10"></th>
               </tr>
             </thead>
             <tbody>
-              {filteredAlerts.map((alert) => (
-                <tr key={alert.id}>
-                  <td className="font-mono text-sm">{alert.id}</td>
-                  <td>
-                    <Badge variant="outline" className="capitalize text-xs">
-                      {alert.type}
-                    </Badge>
-                  </td>
-                  <td className="max-w-[300px]">
-                    <p className="text-sm truncate">{alert.description}</p>
-                    {alert.contributingFactors.length > 0 && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {alert.contributingFactors.length} contributing factors
-                      </p>
+              {filteredAlerts.map((alert) => {
+                const isSelected = selectedId === alert.id;
+                return (
+                  <tr
+                    key={alert.id}
+                    className={cn(
+                      'cursor-pointer transition-colors',
+                      isSelected ? 'bg-primary/10' : 'hover:bg-muted/40'
                     )}
-                  </td>
-                  <td className="font-mono text-xs">{alert.customerId}</td>
-                  <td>
-                    <RiskScoreBadge score={alert.riskScore} level={alert.severity} size="sm" />
-                  </td>
-                  <td>
-                    <AlertStatusBadge status={alert.status} />
-                  </td>
-                  <td className="text-sm">
-                    {alert.assignedTo ? (
-                      <span className="text-foreground">{alert.assignedTo}</span>
-                    ) : (
-                      <span className="text-muted-foreground">Unassigned</span>
-                    )}
-                  </td>
-                  <td className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(alert.createdAt), { addSuffix: true })}
-                  </td>
-                  <td>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          Actions
-                          <ChevronDown className="h-3 w-3 ml-1" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <UserPlus className="h-4 w-4 mr-2" />
-                          Assign to Me
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <ArrowUpRight className="h-4 w-4 mr-2" />
-                          Escalate
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
-                </tr>
-              ))}
+                    onClick={() => handleRowClick(alert.id)}
+                    onKeyDown={(e) => handleRowKeyDown(e, alert.id)}
+                    tabIndex={0}
+                    role="button"
+                    aria-selected={isSelected}
+                    data-testid={`row-alert-${alert.id}`}
+                  >
+                    <td className="font-mono text-sm">{alert.id}</td>
+                    <td>
+                      <Badge variant="outline" className="capitalize text-xs">
+                        {alert.type}
+                      </Badge>
+                    </td>
+                    <td className="max-w-[300px]">
+                      <p className="text-sm truncate">{alert.description}</p>
+                      {alert.contributingFactors.length > 0 && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {alert.contributingFactors.length} contributing factors
+                        </p>
+                      )}
+                    </td>
+                    <td className="font-mono text-xs">{alert.customerId}</td>
+                    <td>
+                      <RiskScoreBadge score={alert.riskScore} level={alert.severity} size="sm" />
+                    </td>
+                    <td>
+                      <AlertStatusBadge status={alert.status} />
+                    </td>
+                    <td className="text-sm">
+                      {alert.assignedTo ? (
+                        <span className="text-foreground">{alert.assignedTo}</span>
+                      ) : (
+                        <span className="text-muted-foreground">Unassigned</span>
+                      )}
+                    </td>
+                    <td className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(new Date(alert.createdAt), { addSuffix: true })}
+                    </td>
+                    <td>
+                      <button
+                        onClick={(e) => handleChevronClick(e, alert.id)}
+                        className="p-1 rounded-md hover:bg-muted transition-colors"
+                        aria-expanded={isSelected}
+                        aria-label={`View details for ${alert.id}`}
+                        data-testid={`button-chevron-alert-${alert.id}`}
+                      >
+                        <ChevronRight className={cn(
+                          'h-4 w-4 text-muted-foreground transition-transform',
+                          isSelected && 'rotate-90'
+                        )} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -223,6 +241,15 @@ const Alerts = () => {
           </div>
         )}
       </div>
+
+      <DetailsDrawer
+        open={isOpen && selectedAlert !== null}
+        onOpenChange={(open) => { if (!open) deselect(); }}
+        title={selectedAlert ? selectedAlert.id : ''}
+        description="Alert Details"
+      >
+        {selectedAlert && <AlertDetailsPanel alert={selectedAlert} />}
+      </DetailsDrawer>
     </div>
   );
 };

@@ -53,6 +53,16 @@ server/
 - `OPENAI_API_KEY` - Required for AI Assistant chat functionality
 
 ## Recent Changes
+- 2026-02-17: Added clickable rows + details drawer across Transactions, Live Monitoring, and Alerts pages
+  - Created reusable DetailsDrawer component (Sheet on desktop >=1024px, Dialog on mobile)
+  - Created TransactionDetailsPanel with full transaction detail layout (summary, customer, merchant, risk, geo/device, raw payload)
+  - Created AlertDetailsPanel with full alert detail layout (summary, description, linked entities, contributing factors, investigation timeline, actions)
+  - Created useDetailsSelection hook for URL state management (?selected=ID query param)
+  - Updated Transactions page: clickable rows, chevron button with rotate animation, keyboard accessibility
+  - Updated Live Monitoring page: clickable rows with selection persistence across auto-refresh data updates
+  - Updated Alerts page: replaced dropdown actions with clickable rows + drawer
+  - All rows have tabIndex, Enter/Space keyboard support, aria-selected/aria-expanded attributes
+  - Chevron buttons use stopPropagation to prevent double-trigger
 - 2026-02-16: Migrated from Lovable/Supabase to Replit environment
   - Removed Supabase client and dependencies
   - Moved AI chat from Supabase Edge Function to Express API route
