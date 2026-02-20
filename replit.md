@@ -50,9 +50,17 @@ server/
 - Vite proxies `/api` requests to Express server
 
 ## Environment Variables
-- `OPENAI_API_KEY` - Required for AI Assistant chat functionality
+- AI Assistant supports both Azure OpenAI and standard OpenAI (Azure is checked first):
+  - `AZURE_OPENAI_API_KEY` - Azure OpenAI API key
+  - `AZURE_OPENAI_ENDPOINT` - Azure OpenAI resource URL
+  - `AZURE_OPENAI_DEPLOYMENT` - Azure OpenAI deployment name
+  - `OPENAI_API_KEY` - Standard OpenAI API key (fallback if Azure not configured)
 
 ## Recent Changes
+- 2026-02-20: Added Azure OpenAI support for AI Assistant chat
+  - Backend now supports both Azure OpenAI and standard OpenAI providers
+  - Azure OpenAI is preferred when all three env vars are set (key, endpoint, deployment)
+  - Falls back to standard OpenAI if Azure is not configured
 - 2026-02-20: Fixed Cases page - cases now persist when created via New Case dialog
   - Added fallback in generateCases to always produce at least 5 cases with deterministic data
   - Converted Cases page from useMemo to useState so new cases are added to the list

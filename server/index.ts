@@ -5,27 +5,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.post("/api/chat", async (req, res) => {
-  try {
-    const { messages } = req.body;
-    const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-
-    if (!OPENAI_API_KEY) {
-      return res.status(500).json({ error: "OPENAI_API_KEY is not configured" });
-    }
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: `You are SnapFort, an advanced fraud detection and AML investigation assistant for financial services institutions.
+const SYSTEM_PROMPT = `You are SnapFort, an advanced fraud detection and AML investigation assistant for financial services institutions.
 
 Your capabilities include:
 - Analyzing transaction patterns and identifying suspicious activities
@@ -36,12 +16,67 @@ Your capabilities include:
 
 Always provide clear, concise, and actionable insights. When discussing specific cases or transactions, explain the risk factors in a way that compliance officers and fraud analysts can understand.
 
-Format your responses with markdown for better readability. Use bullet points for lists and bold text for important terms.`,
-          },
-          ...messages,
-        ],
-        stream: true,
-      }),
+Format your responses with markdown for better readability. Use bullet points for lists and bold text for important terms.`;
+
+function getAIConfig(): { provider: string; url: string; headers: Record<string, string> } | null {
+  const azureKey = process.env.AZURE_OPENAI_API_KEY;
+  const azureEndpoint = process.env.AZURE_OPENAI_ENDPOINT;
+  const azureDeployment = process.env.AZURE_OPENAI_DEPLOYMENT;
+
+  if (azureKey && azureEndpoint && azureDeployment) {
+    const baseUrl = azureEndpoint.replace(/\/$/, "");
+    return {
+      provider: "azure",
+      url: `${baseUrl}/openai/deployments/${azureDeployment}/chat/completions?api-version=2024-08-01-preview`,
+      headers: {
+        "api-key": azureKey,
+        "Content-Type": "application/json",
+      },
+    };
+  }
+
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (openaiKey) {
+    return {
+      provider: "openai",
+      url: "https://api.openai.com/v1/chat/completions",
+      headers: {
+        "Authorization": `Bearer ${openaiKey}`,
+        "Content-Type": "application/json",
+      },
+    };
+  }
+
+  return null;
+}
+
+app.post("/api/chat", async (req, res) => {
+  try {
+    const { messages } = req.body;
+    const config = getAIConfig();
+
+    if (!config) {
+      return res.status(500).json({ error: "No AI provider configured. Set Azure OpenAI or OpenAI API keys." });
+    }
+
+    const body: Record<string, unknown> = {
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        ...messages,
+      ],
+      stream: true,
+    };
+
+    if (config.provider === "openai") {
+      body.model = "gpt-4o-mini";
+    }
+
+    console.log(`Using ${config.provider} AI provider`);
+
+    const response = await fetch(config.url, {
+      method: "POST",
+      headers: config.headers,
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
