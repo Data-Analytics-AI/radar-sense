@@ -47,11 +47,11 @@ const AIAssistant = () => {
     }
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
-    const message = input.trim();
+  const handleSend = async (overrideMessage?: string) => {
+    const text = overrideMessage || input.trim();
+    if (!text || isLoading) return;
     setInput('');
-    await sendMessage(message);
+    await sendMessage(text);
   };
   
   return (
@@ -98,8 +98,9 @@ const AIAssistant = () => {
                   {suggestedQueries.slice(0, 3).map((query, i) => (
                     <button
                       key={i}
-                      onClick={() => setInput(query)}
-                      className="text-left text-sm p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all"
+                      onClick={() => handleSend(query)}
+                      disabled={isLoading}
+                      className="text-left text-sm p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all disabled:opacity-50"
                     >
                       {query}
                     </button>
@@ -181,8 +182,9 @@ const AIAssistant = () => {
               {suggestedQueries.map((query, i) => (
                 <button
                   key={i}
-                  onClick={() => setInput(query)}
-                  className="w-full text-left text-xs p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                  onClick={() => handleSend(query)}
+                  disabled={isLoading}
+                  className="w-full text-left text-xs p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors disabled:opacity-50"
                 >
                   {query}
                 </button>
