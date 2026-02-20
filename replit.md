@@ -58,6 +58,17 @@ server/
   - `OPENAI_API_KEY` - Standard OpenAI API key (fallback if Azure not configured)
 
 ## Recent Changes
+- 2026-02-20: Comprehensive User & Access Management module
+  - Extended types: IAMUser, UserStatus, PrivilegeLevel, SSOProvider, UserSession, UserAuditEntry, AccessApproval, RoleDefinition, PERMISSION_GROUPS
+  - Mock data: 20 IAM users with sessions, audit logs, approvals; 6 role definitions with permissions
+  - KPI cards: Total Users, Active, Privileged, MFA %, SSO, Locked/Suspended, Failed Logins, Pending Approvals (all clickable to filter)
+  - Toolbar: search, role/status/MFA/SSO filters, saved views (Privileged, MFA Disabled, Locked/Suspended, Invited), sort options
+  - Enhanced table: roles, privilege level, status, MFA, SSO, last login with tooltip, last activity, failed logins
+  - User Detail Drawer (Sheet) with 5 tabs: Profile, Roles & Permissions, Security, Audit Activity, Approvals/SoD
+  - Add User modal: name, email, roles, department, team, auth method, MFA requirement, invite message
+  - Role Management modal: role list with permissions matrix, permission groups (Monitoring, Investigations, Rules, Models, Analytics, Admin)
+  - Audit logging: actions logged for status changes, MFA toggles, password resets, session terminations
+  - User lifecycle: invite → activate → suspend → lock → deactivate (with status transition buttons)
 - 2026-02-20: Built comprehensive Case Investigation workspace
   - Expanded Case types: CaseTimelineEvent, LinkedEntity (vendor/employee/contract/invoice), Evidence with custody chain, CaseResolution
   - Changed CaseStatus from 'resolved' to 'closed' for proper workflow (Open → In Review → Escalated → Closed)

@@ -16,7 +16,17 @@ import {
   TimeSeriesData,
   RiskLevel,
   TransactionType,
-  Channel
+  Channel,
+  IAMUser,
+  UserRole,
+  UserStatus,
+  PrivilegeLevel,
+  SSOProvider,
+  RoleDefinition,
+  UserSession,
+  UserAuditEntry,
+  AccessApproval,
+  PERMISSION_GROUPS
 } from '@/types';
 
 // Helper to generate random ID
@@ -1006,6 +1016,129 @@ export const getChannelDistribution = (): { name: string; value: number }[] => [
   { name: 'Branch', value: 5 }
 ];
 
+// ==================== IAM MOCK DATA ====================
+
+const IAM_USERS_DATA: Array<{
+  name: string; email: string; roles: UserRole[]; privilegeLevel: PrivilegeLevel;
+  status: UserStatus; department: string; team: string; title: string;
+  mfaEnabled: boolean; ssoProvider: SSOProvider; authMethod: 'local' | 'sso';
+  failedLogins24h: number;
+}> = [
+  { name: 'John Doe', email: 'john.doe@snapnet.com', roles: ['admin'], privilegeLevel: 'admin', status: 'active', department: 'Technology', team: 'Platform', title: 'System Administrator', mfaEnabled: true, ssoProvider: 'azure_ad', authMethod: 'sso', failedLogins24h: 0 },
+  { name: 'Sarah Smith', email: 'sarah.smith@snapnet.com', roles: ['risk_analyst'], privilegeLevel: 'elevated', status: 'active', department: 'Risk', team: 'Fraud Detection', title: 'Senior Risk Analyst', mfaEnabled: true, ssoProvider: 'azure_ad', authMethod: 'sso', failedLogins24h: 0 },
+  { name: 'Mike Johnson', email: 'mike.j@snapnet.com', roles: ['compliance_officer'], privilegeLevel: 'elevated', status: 'active', department: 'Compliance', team: 'Regulatory', title: 'Compliance Officer', mfaEnabled: true, ssoProvider: 'azure_ad', authMethod: 'sso', failedLogins24h: 1 },
+  { name: 'Emily Brown', email: 'emily.b@snapnet.com', roles: ['aml_analyst'], privilegeLevel: 'standard', status: 'active', department: 'Risk', team: 'AML', title: 'AML Analyst', mfaEnabled: true, ssoProvider: 'none', authMethod: 'local', failedLogins24h: 0 },
+  { name: 'David Wilson', email: 'david.w@snapnet.com', roles: ['auditor'], privilegeLevel: 'standard', status: 'suspended', department: 'Compliance', team: 'Internal Audit', title: 'Internal Auditor', mfaEnabled: false, ssoProvider: 'none', authMethod: 'local', failedLogins24h: 0 },
+  { name: 'Lisa Chen', email: 'lisa.chen@snapnet.com', roles: ['viewer'], privilegeLevel: 'standard', status: 'active', department: 'Operations', team: 'Support', title: 'Operations Analyst', mfaEnabled: true, ssoProvider: 'okta', authMethod: 'sso', failedLogins24h: 0 },
+  { name: 'Robert Taylor', email: 'robert.t@snapnet.com', roles: ['admin', 'risk_analyst'], privilegeLevel: 'admin', status: 'active', department: 'Technology', team: 'Security', title: 'Security Director', mfaEnabled: true, ssoProvider: 'azure_ad', authMethod: 'sso', failedLogins24h: 0 },
+  { name: 'Amanda Garcia', email: 'amanda.g@snapnet.com', roles: ['risk_analyst', 'aml_analyst'], privilegeLevel: 'elevated', status: 'active', department: 'Risk', team: 'Fraud Detection', title: 'Risk Analyst', mfaEnabled: true, ssoProvider: 'azure_ad', authMethod: 'sso', failedLogins24h: 2 },
+  { name: 'James Lee', email: 'james.lee@snapnet.com', roles: ['compliance_officer'], privilegeLevel: 'elevated', status: 'active', department: 'Compliance', team: 'Regulatory', title: 'Senior Compliance Analyst', mfaEnabled: true, ssoProvider: 'azure_ad', authMethod: 'sso', failedLogins24h: 0 },
+  { name: 'Nina Patel', email: 'nina.p@snapnet.com', roles: ['aml_analyst'], privilegeLevel: 'standard', status: 'active', department: 'Risk', team: 'AML', title: 'AML Investigator', mfaEnabled: false, ssoProvider: 'none', authMethod: 'local', failedLogins24h: 0 },
+  { name: 'Carlos Rivera', email: 'carlos.r@snapnet.com', roles: ['viewer'], privilegeLevel: 'standard', status: 'invited', department: 'Operations', team: 'Support', title: 'Junior Analyst', mfaEnabled: false, ssoProvider: 'none', authMethod: 'local', failedLogins24h: 0 },
+  { name: 'Helen Park', email: 'helen.p@snapnet.com', roles: ['risk_analyst'], privilegeLevel: 'elevated', status: 'active', department: 'Risk', team: 'Fraud Detection', title: 'Lead Risk Analyst', mfaEnabled: true, ssoProvider: 'okta', authMethod: 'sso', failedLogins24h: 0 },
+  { name: 'Tom Richards', email: 'tom.r@snapnet.com', roles: ['auditor'], privilegeLevel: 'standard', status: 'active', department: 'Compliance', team: 'Internal Audit', title: 'Auditor', mfaEnabled: true, ssoProvider: 'azure_ad', authMethod: 'sso', failedLogins24h: 0 },
+  { name: 'Diana Murphy', email: 'diana.m@snapnet.com', roles: ['admin'], privilegeLevel: 'admin', status: 'active', department: 'Technology', team: 'Platform', title: 'IT Manager', mfaEnabled: true, ssoProvider: 'azure_ad', authMethod: 'sso', failedLogins24h: 0 },
+  { name: 'Frank Novak', email: 'frank.n@snapnet.com', roles: ['aml_analyst'], privilegeLevel: 'standard', status: 'locked', department: 'Risk', team: 'AML', title: 'AML Analyst II', mfaEnabled: true, ssoProvider: 'none', authMethod: 'local', failedLogins24h: 5 },
+  { name: 'Grace Kim', email: 'grace.k@snapnet.com', roles: ['compliance_officer', 'auditor'], privilegeLevel: 'elevated', status: 'active', department: 'Compliance', team: 'Regulatory', title: 'Compliance Director', mfaEnabled: true, ssoProvider: 'azure_ad', authMethod: 'sso', failedLogins24h: 0 },
+  { name: 'Ivan Petrov', email: 'ivan.p@snapnet.com', roles: ['viewer'], privilegeLevel: 'standard', status: 'deactivated', department: 'Operations', team: 'Support', title: 'Former Contractor', mfaEnabled: false, ssoProvider: 'none', authMethod: 'local', failedLogins24h: 0 },
+  { name: 'Julia West', email: 'julia.w@snapnet.com', roles: ['risk_analyst'], privilegeLevel: 'standard', status: 'active', department: 'Risk', team: 'Fraud Detection', title: 'Risk Analyst', mfaEnabled: true, ssoProvider: 'azure_ad', authMethod: 'sso', failedLogins24h: 0 },
+  { name: 'Kevin Zhao', email: 'kevin.z@snapnet.com', roles: ['aml_analyst'], privilegeLevel: 'standard', status: 'active', department: 'Risk', team: 'AML', title: 'AML Analyst', mfaEnabled: false, ssoProvider: 'none', authMethod: 'local', failedLogins24h: 3 },
+  { name: 'Maria Santos', email: 'maria.s@snapnet.com', roles: ['viewer'], privilegeLevel: 'standard', status: 'invited', department: 'Compliance', team: 'Regulatory', title: 'Regulatory Intern', mfaEnabled: false, ssoProvider: 'none', authMethod: 'local', failedLogins24h: 0 },
+];
+
+const AUDIT_ACTIONS = [
+  'Viewed transaction TXN-4821', 'Created case CASE-1012', 'Updated rule RULE-003',
+  'Exported compliance report', 'Investigated alert ALT-2891', 'Changed user role',
+  'Approved access request', 'Downloaded evidence file', 'Ran rule simulation',
+  'Viewed analytics dashboard', 'Updated case status', 'Added investigation note',
+  'Linked entity to case', 'Exported audit log', 'Reset user password',
+  'Terminated user session', 'Suspended user account', 'Created new user',
+];
+
+const DEVICES = ['Windows 11 / Chrome 120', 'macOS Sonoma / Safari 17', 'Windows 10 / Edge 121', 'macOS Ventura / Chrome 120', 'Ubuntu 22 / Firefox 121', 'iPad OS 17 / Safari'];
+const IPS = ['192.168.1.45', '10.0.0.23', '172.16.0.88', '192.168.5.12', '10.0.1.100', '172.16.2.44', '192.168.3.67'];
+const LOCATIONS = ['New York, US', 'London, UK', 'Singapore, SG', 'Toronto, CA', 'Frankfurt, DE', 'Sydney, AU', 'Mumbai, IN'];
+
+export const generateIAMUsers = (): IAMUser[] => {
+  return IAM_USERS_DATA.map((u, idx) => {
+    const id = `USR-${String(idx + 1).padStart(3, '0')}`;
+    const daysAgo = idx === 4 ? 30 : idx === 16 ? 60 : randomRange(0, 7);
+    const hoursAgo = randomRange(1, 23);
+    const lastLogin = new Date(Date.now() - daysAgo * 86400000 - hoursAgo * 3600000).toISOString();
+    const lastActivity = new Date(Date.now() - randomRange(0, 3) * 3600000 * 1000).toISOString();
+    const createdDaysAgo = randomRange(60, 400);
+
+    const sessions: UserSession[] = u.status === 'active' ? Array.from({ length: randomRange(1, 3) }, (_, si) => ({
+      id: `SES-${id}-${si + 1}`,
+      device: DEVICES[randomRange(0, DEVICES.length - 1)],
+      browser: DEVICES[randomRange(0, DEVICES.length - 1)].split(' / ')[1] || 'Chrome',
+      ipAddress: IPS[randomRange(0, IPS.length - 1)],
+      location: LOCATIONS[randomRange(0, LOCATIONS.length - 1)],
+      loginTime: new Date(Date.now() - randomRange(0, 48) * 3600000).toISOString(),
+      lastActivity: new Date(Date.now() - randomRange(0, 4) * 3600000).toISOString(),
+      isActive: si === 0,
+    })) : [];
+
+    const auditLog: UserAuditEntry[] = Array.from({ length: randomRange(5, 15) }, (_, ai) => ({
+      id: `AUD-${id}-${ai + 1}`,
+      action: AUDIT_ACTIONS[randomRange(0, AUDIT_ACTIONS.length - 1)],
+      timestamp: new Date(Date.now() - randomRange(0, 30) * 86400000 - randomRange(0, 23) * 3600000).toISOString(),
+      ipAddress: IPS[randomRange(0, IPS.length - 1)],
+      details: AUDIT_ACTIONS[randomRange(0, AUDIT_ACTIONS.length - 1)],
+    })).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    const approvals: AccessApproval[] = u.privilegeLevel !== 'standard' ? [{
+      id: `APR-${id}-1`,
+      requestedRole: u.roles[0],
+      requestedBy: u.name,
+      requestedAt: new Date(Date.now() - createdDaysAgo * 86400000 + 86400000).toISOString(),
+      approver: 'John Doe',
+      approvedAt: new Date(Date.now() - createdDaysAgo * 86400000 + 172800000).toISOString(),
+      status: 'approved' as const,
+      reason: `Role required for ${u.title} responsibilities`,
+    }] : [];
+
+    return {
+      id,
+      email: u.email,
+      name: u.name,
+      roles: u.roles,
+      privilegeLevel: u.privilegeLevel,
+      status: u.status,
+      department: u.department,
+      team: u.team,
+      title: u.title,
+      mfaEnabled: u.mfaEnabled,
+      ssoProvider: u.ssoProvider,
+      authMethod: u.authMethod,
+      lastLogin,
+      lastLoginIp: IPS[randomRange(0, IPS.length - 1)],
+      lastLoginLocation: LOCATIONS[randomRange(0, LOCATIONS.length - 1)],
+      lastLoginDevice: DEVICES[randomRange(0, DEVICES.length - 1)],
+      lastActivity,
+      lastActivityAction: AUDIT_ACTIONS[randomRange(0, AUDIT_ACTIONS.length - 1)],
+      failedLogins24h: u.failedLogins24h,
+      createdAt: new Date(Date.now() - createdDaysAgo * 86400000).toISOString(),
+      createdBy: idx === 0 ? 'System' : 'John Doe',
+      sessions,
+      auditLog,
+      approvals,
+    };
+  });
+};
+
+export const generateRoleDefinitions = (): RoleDefinition[] => {
+  const allPerms = Object.values(PERMISSION_GROUPS).flat();
+  return [
+    { id: 'role-admin', name: 'admin', label: 'Admin', description: 'Full system access including user management, configuration, and all operational capabilities', privilegeLevel: 'admin', permissions: allPerms, userCount: 3 },
+    { id: 'role-risk', name: 'risk_analyst', label: 'Risk Analyst', description: 'Alert investigation, case management, rule creation, and fraud detection operations', privilegeLevel: 'elevated', permissions: ['view_live_monitoring', 'export_monitoring_data', 'view_alerts', 'manage_alerts', 'view_cases', 'manage_cases', 'create_cases', 'view_rules', 'create_rules', 'edit_rules', 'simulate_rules', 'view_analytics', 'export_reports', 'view_dashboards'], userCount: 4 },
+    { id: 'role-compliance', name: 'compliance_officer', label: 'Compliance Officer', description: 'SAR/STR filing, regulatory reporting, audit access, and compliance monitoring', privilegeLevel: 'elevated', permissions: ['view_live_monitoring', 'view_alerts', 'view_cases', 'manage_cases', 'view_rules', 'view_analytics', 'export_reports', 'view_dashboards', 'view_audit_logs'], userCount: 3 },
+    { id: 'role-aml', name: 'aml_analyst', label: 'AML Analyst', description: 'Anti-money laundering investigation, suspicious activity monitoring, and AML case management', privilegeLevel: 'standard', permissions: ['view_live_monitoring', 'view_alerts', 'manage_alerts', 'view_cases', 'manage_cases', 'create_cases', 'view_rules', 'view_analytics', 'view_dashboards'], userCount: 4 },
+    { id: 'role-auditor', name: 'auditor', label: 'Auditor', description: 'Read-only access to audit trails, compliance reports, and system activity logs', privilegeLevel: 'standard', permissions: ['view_live_monitoring', 'view_alerts', 'view_cases', 'view_rules', 'view_analytics', 'export_reports', 'view_dashboards', 'view_audit_logs'], userCount: 3 },
+    { id: 'role-viewer', name: 'viewer', label: 'Viewer', description: 'Basic read-only access to dashboards and monitoring views', privilegeLevel: 'standard', permissions: ['view_live_monitoring', 'view_alerts', 'view_cases', 'view_analytics', 'view_dashboards'], userCount: 4 },
+  ];
+};
+
 // Initialize all mock data
 export const initializeMockData = () => {
   const transactions = generateTransactions(200);
@@ -1015,6 +1148,8 @@ export const initializeMockData = () => {
   const rules = generateRules();
   const models = generateModels();
   const stats = generateDashboardStats();
+  const iamUsers = generateIAMUsers();
+  const roleDefinitions = generateRoleDefinitions();
   
   return {
     transactions,
@@ -1023,7 +1158,9 @@ export const initializeMockData = () => {
     customers,
     rules,
     models,
-    stats
+    stats,
+    iamUsers,
+    roleDefinitions
   };
 };
 

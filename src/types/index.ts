@@ -280,6 +280,88 @@ export interface TimeSeriesData {
   label?: string;
 }
 
+export type UserStatus = 'active' | 'invited' | 'suspended' | 'locked' | 'deactivated';
+export type PrivilegeLevel = 'standard' | 'elevated' | 'admin';
+export type SSOProvider = 'azure_ad' | 'okta' | 'none';
+export type AuthMethod = 'local' | 'sso';
+
+export interface UserSession {
+  id: string;
+  device: string;
+  browser: string;
+  ipAddress: string;
+  location: string;
+  loginTime: string;
+  lastActivity: string;
+  isActive: boolean;
+}
+
+export interface UserAuditEntry {
+  id: string;
+  action: string;
+  target?: string;
+  timestamp: string;
+  ipAddress?: string;
+  details: string;
+}
+
+export interface AccessApproval {
+  id: string;
+  requestedRole: string;
+  requestedBy: string;
+  requestedAt: string;
+  approver?: string;
+  approvedAt?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reason: string;
+}
+
+export interface RoleDefinition {
+  id: string;
+  name: string;
+  label: string;
+  description: string;
+  privilegeLevel: PrivilegeLevel;
+  permissions: string[];
+  userCount: number;
+}
+
+export const PERMISSION_GROUPS: Record<string, string[]> = {
+  Monitoring: ['view_live_monitoring', 'export_monitoring_data'],
+  Investigations: ['view_alerts', 'manage_alerts', 'view_cases', 'manage_cases', 'create_cases'],
+  Rules: ['view_rules', 'create_rules', 'edit_rules', 'delete_rules', 'simulate_rules'],
+  Models: ['view_models', 'retrain_models', 'deploy_models'],
+  Analytics: ['view_analytics', 'export_reports', 'view_dashboards'],
+  Admin: ['manage_users', 'manage_roles', 'view_audit_logs', 'manage_settings', 'manage_integrations'],
+};
+
+export interface IAMUser {
+  id: string;
+  email: string;
+  name: string;
+  roles: UserRole[];
+  privilegeLevel: PrivilegeLevel;
+  status: UserStatus;
+  department: string;
+  team: string;
+  title: string;
+  mfaEnabled: boolean;
+  ssoProvider: SSOProvider;
+  authMethod: AuthMethod;
+  lastLogin: string;
+  lastLoginIp: string;
+  lastLoginLocation: string;
+  lastLoginDevice: string;
+  lastActivity: string;
+  lastActivityAction: string;
+  failedLogins24h: number;
+  createdAt: string;
+  createdBy: string;
+  sessions: UserSession[];
+  auditLog: UserAuditEntry[];
+  approvals: AccessApproval[];
+}
+
 export interface User {
   id: string;
   email: string;
