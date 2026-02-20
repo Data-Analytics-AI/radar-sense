@@ -344,11 +344,16 @@ const Users = () => {
               ) : filteredUsers.map((user) => (
                 <tr
                   key={user.id}
-                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  className={cn(
+                    'cursor-pointer hover:bg-muted/50 transition-colors',
+                    selectedUserId === user.id && 'bg-primary/5 hover:bg-primary/10'
+                  )}
                   onClick={() => setSelectedUserId(user.id)}
                   tabIndex={0}
-                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setSelectedUserId(user.id); }}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedUserId(user.id); } }}
                   aria-selected={selectedUserId === user.id}
+                  aria-expanded={selectedUserId === user.id}
+                  role="button"
                   data-testid={`row-user-${user.id}`}
                 >
                   <td>
@@ -380,7 +385,7 @@ const Users = () => {
                   <td>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span className="text-xs text-muted-foreground cursor-default">
+                        <span className="text-xs text-muted-foreground">
                           {user.lastLogin ? formatDistanceToNow(new Date(user.lastLogin), { addSuffix: true }) : 'Never'}
                         </span>
                       </TooltipTrigger>
@@ -397,7 +402,15 @@ const Users = () => {
                     ) : <span className="text-xs text-muted-foreground">0</span>}
                   </td>
                   <td>
-                    <ChevronRight className={cn('h-4 w-4 text-muted-foreground transition-transform', selectedUserId === user.id && 'rotate-90')} />
+                    <button
+                      className="p-1 rounded hover:bg-muted/80 transition-colors"
+                      onClick={(e) => { e.stopPropagation(); setSelectedUserId(user.id); }}
+                      tabIndex={-1}
+                      aria-label={`Open details for ${user.name}`}
+                      data-testid={`button-chevron-${user.id}`}
+                    >
+                      <ChevronRight className={cn('h-4 w-4 text-muted-foreground transition-transform', selectedUserId === user.id && 'rotate-90')} />
+                    </button>
                   </td>
                 </tr>
               ))}
