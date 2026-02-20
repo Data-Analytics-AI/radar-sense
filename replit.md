@@ -19,6 +19,7 @@ src/
     dashboard/    - Dashboard stat cards, charts, feeds
     cases/        - Case management dialogs
     rules/        - Rule creation dialogs
+    ai/           - AI response renderer and intent-specific views
     ui/           - Shadcn UI components
   pages/          - Route pages (Dashboard, Alerts, Cases, etc.)
   hooks/          - Custom hooks (useAIChat, use-toast, etc.)
@@ -38,7 +39,7 @@ server/
 - Transactions - Transaction search and analysis
 - Analytics - Charts and analytics
 - Graph Network - Network analysis visualization
-- AI Assistant - AI-powered investigation assistant (uses OpenAI)
+- AI Assistant - Context-aware AI investigation assistant with structured response rendering (6 intent-specific views)
 - Rules Engine - Fraud detection rules
 - Models - ML model management
 - Users - User management
@@ -58,6 +59,23 @@ server/
   - `OPENAI_API_KEY` - Standard OpenAI API key (fallback if Azure not configured)
 
 ## Recent Changes
+- 2026-02-20: Context-aware AI Response Rendering System
+  - New: AIResponseEnvelope type system with intent, sections, entities, actions, confidence
+  - New: Hybrid intent detection (heuristic classifier) for 6 intent types: transaction_analysis, customer_analysis, sar_draft, analytics_summary, case_summary, general_answer
+  - New: Markdown-to-structured parser that extracts sections, bullets, tables, entities (TXN-xxx, CUST-xxx, CASE-xxx)
+  - New: AIResponseRenderer component with 6 intent-specific views:
+    - TransactionInvestigationView: risk driver cards, entity badges, action buttons
+    - CustomerRiskProfileView: behavioral pattern cards, anomaly lists
+    - SARDocumentView: document editor layout with structured SAR sections, copy/export
+    - AnalyticsInsightView: KPI metric cards grid, ranked key drivers
+    - CaseSummaryTimelineView: vertical timeline, linked entity badges, recommendation box
+    - StructuredAnswerView: key takeaways box, clean bullet formatting
+  - Updated useAIChat hook to track user prompts per message and generate envelope after streaming completes
+  - Updated AIAssistant page with categorized suggested queries (icons + labels), response type sidebar, streaming skeleton
+  - Files: src/lib/ai-response-parser.ts, src/components/ai/AIResponseRenderer.tsx, src/hooks/useAIChat.ts, src/pages/AIAssistant.tsx
+- 2026-02-20: Fixed stat-card CSS overlay blocking clicks on Users table rows
+  - Added pointer-events-none to .stat-card::before pseudo-element
+  - Added active row highlight, aria-expanded, proper chevron button
 - 2026-02-20: Comprehensive User & Access Management module
   - Extended types: IAMUser, UserStatus, PrivilegeLevel, SSOProvider, UserSession, UserAuditEntry, AccessApproval, RoleDefinition, PERMISSION_GROUPS
   - Mock data: 20 IAM users with sessions, audit logs, approvals; 6 role definitions with permissions

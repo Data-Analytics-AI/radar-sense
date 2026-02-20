@@ -1,8 +1,12 @@
 import { useState, useCallback } from 'react';
+import { parseAIResponse, type AIResponseEnvelope } from '@/lib/ai-response-parser';
 
-interface Message {
+export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+  userPrompt?: string;
+  envelope?: AIResponseEnvelope | null;
+  isStreaming?: boolean;
 }
 
 interface UseAIChatOptions {
@@ -10,35 +14,33 @@ interface UseAIChatOptions {
 }
 
 export function useAIChat(options: UseAIChatOptions = {}) {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const sendMessage = useCallback(async (input: string) => {
-    const userMsg: Message = { role: 'user', content: input };
+    const userMsg: ChatMessage = { role: 'user', content: input };
     setMessages(prev => [...prev, userMsg]);
     setIsLoading(true);
 
     let assistantContent = '';
 
     try {
+      const apiMessages = [...messages, userMsg].map(m => ({ role: m.role, content: m.content }));
+
       const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ messages: [...messages, userMsg] }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: apiMessages }),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorMessage = errorData.error || `Request failed with status ${response.status}`;
-        
         if (response.status === 429) {
           options.onError?.('Rate limit exceeded. Please wait a moment and try again.');
         } else {
           options.onError?.(errorMessage);
         }
-        
         setIsLoading(false);
         return;
       }
@@ -52,7 +54,7 @@ export function useAIChat(options: UseAIChatOptions = {}) {
       let textBuffer = '';
       let streamDone = false;
 
-      setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: '', userPrompt: input, envelope: null, isStreaming: true }]);
 
       while (!streamDone) {
         const { done, value } = await reader.read();
@@ -84,7 +86,7 @@ export function useAIChat(options: UseAIChatOptions = {}) {
                 const updated = [...prev];
                 const lastIdx = updated.length - 1;
                 if (updated[lastIdx]?.role === 'assistant') {
-                  updated[lastIdx] = { ...updated[lastIdx], content: assistantContent };
+                  updated[lastIdx] = { ...updated[lastIdx], content: assistantContent, isStreaming: true };
                 }
                 return updated;
               });
@@ -109,18 +111,21 @@ export function useAIChat(options: UseAIChatOptions = {}) {
             const content = parsed.choices?.[0]?.delta?.content as string | undefined;
             if (content) {
               assistantContent += content;
-              setMessages(prev => {
-                const updated = [...prev];
-                const lastIdx = updated.length - 1;
-                if (updated[lastIdx]?.role === 'assistant') {
-                  updated[lastIdx] = { ...updated[lastIdx], content: assistantContent };
-                }
-                return updated;
-              });
             }
           } catch { /* ignore */ }
         }
       }
+
+      const envelope = parseAIResponse(input, assistantContent);
+      setMessages(prev => {
+        const updated = [...prev];
+        const lastIdx = updated.length - 1;
+        if (updated[lastIdx]?.role === 'assistant') {
+          updated[lastIdx] = { ...updated[lastIdx], content: assistantContent, envelope, isStreaming: false };
+        }
+        return updated;
+      });
+
     } catch (error) {
       console.error('Chat error:', error);
       options.onError?.(error instanceof Error ? error.message : 'Failed to send message');
