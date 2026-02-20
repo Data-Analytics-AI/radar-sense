@@ -105,12 +105,62 @@ export interface Customer {
   lastActivity: string;
 }
 
+export type RuleType = 'velocity' | 'amount' | 'geographic' | 'time' | 'device' | 'blacklist' | 'entity_relationship' | 'pattern';
+export type RuleCategory = 'fraud' | 'aml';
+export type ConditionOperator = 'greater_than' | 'less_than' | 'equals' | 'not_equals' | 'greater_equal' | 'less_equal' | 'contains' | 'in' | 'not_in' | 'between';
+export type ConditionField = 'amount' | 'risk_score' | 'velocity_count' | 'country' | 'channel' | 'merchant_category' | 'device_id' | 'ip_address' | 'transaction_type' | 'time_hour' | 'customer_age' | 'anomaly_score';
+export type LogicOperator = 'AND' | 'OR';
+export type SeverityLevel = 'info' | 'low' | 'medium' | 'high' | 'critical';
+export type RuleActionType = 'flag' | 'block' | 'alert' | 'escalate' | 'require_review' | 'notify';
+
+export interface RuleCondition {
+  id: string;
+  field: ConditionField;
+  operator: ConditionOperator;
+  value: string | number;
+  secondaryValue?: string | number;
+  timeWindow?: { value: number; unit: 'minutes' | 'hours' | 'days' };
+  entityScope?: 'customer' | 'merchant' | 'device' | 'ip' | 'account';
+}
+
+export interface RuleConditionGroup {
+  id: string;
+  logic: LogicOperator;
+  conditions: (RuleCondition | RuleConditionGroup)[];
+}
+
+export interface RuleAction {
+  type: RuleActionType;
+  config?: Record<string, string>;
+}
+
+export interface RuleVersion {
+  version: number;
+  conditionGroup: RuleConditionGroup;
+  actions: RuleAction[];
+  severity: SeverityLevel;
+  changedBy: string;
+  changedAt: string;
+  changeNote: string;
+}
+
+export interface RuleAuditEntry {
+  id: string;
+  action: 'created' | 'updated' | 'activated' | 'deactivated' | 'simulated' | 'version_restored';
+  performedBy: string;
+  timestamp: string;
+  details: string;
+}
+
 export interface Rule {
   id: string;
   name: string;
   description: string;
-  type: 'velocity' | 'amount' | 'geographic' | 'time' | 'device' | 'blacklist';
-  category: 'fraud' | 'aml';
+  type: RuleType;
+  category: RuleCategory;
+  conditionGroup: RuleConditionGroup;
+  actions: RuleAction[];
+  severity: SeverityLevel;
   condition: string;
   threshold: number;
   priority: number;
@@ -118,6 +168,9 @@ export interface Rule {
   createdAt: string;
   updatedAt: string;
   triggeredCount: number;
+  versions: RuleVersion[];
+  auditLog: RuleAuditEntry[];
+  currentVersion: number;
 }
 
 export interface ModelMetrics {

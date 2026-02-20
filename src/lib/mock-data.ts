@@ -4,6 +4,7 @@ import {
   Case, 
   Customer, 
   Rule, 
+  RuleConditionGroup,
   MLModel, 
   DashboardStats,
   TimeSeriesData,
@@ -260,119 +261,264 @@ export const generateCustomers = (count: number = 50): Customer[] => {
   return customers;
 };
 
-// Generate rules
 export const generateRules = (): Rule[] => [
   {
     id: 'RULE-001',
     name: 'High Amount Single Transaction',
-    description: 'Flag transactions exceeding $10,000',
+    description: 'Flag transactions exceeding $10,000 from any channel',
     type: 'amount',
     category: 'fraud',
-    condition: 'amount > threshold',
+    condition: 'amount > 10000',
     threshold: 10000,
     priority: 1,
     isActive: true,
+    severity: 'high',
     createdAt: '2024-01-15T00:00:00Z',
-    updatedAt: '2024-01-15T00:00:00Z',
-    triggeredCount: 245
+    updatedAt: '2025-11-20T00:00:00Z',
+    triggeredCount: 245,
+    currentVersion: 2,
+    conditionGroup: {
+      id: 'cg-001',
+      logic: 'AND',
+      conditions: [
+        { id: 'c-001-1', field: 'amount', operator: 'greater_than', value: 10000 },
+        { id: 'c-001-2', field: 'risk_score', operator: 'greater_equal', value: 30 }
+      ]
+    },
+    actions: [
+      { type: 'flag' },
+      { type: 'alert', config: { team: 'fraud-ops' } }
+    ],
+    versions: [
+      { version: 1, conditionGroup: { id: 'cg-001-v1', logic: 'AND', conditions: [{ id: 'c-v1-1', field: 'amount', operator: 'greater_than', value: 10000 }] }, actions: [{ type: 'flag' }], severity: 'medium', changedBy: 'admin', changedAt: '2024-01-15T00:00:00Z', changeNote: 'Initial rule creation' },
+      { version: 2, conditionGroup: { id: 'cg-001', logic: 'AND', conditions: [{ id: 'c-001-1', field: 'amount', operator: 'greater_than', value: 10000 }, { id: 'c-001-2', field: 'risk_score', operator: 'greater_equal', value: 30 }] }, actions: [{ type: 'flag' }, { type: 'alert', config: { team: 'fraud-ops' } }], severity: 'high', changedBy: 'analyst-1', changedAt: '2025-11-20T00:00:00Z', changeNote: 'Added risk score threshold and alert action' }
+    ],
+    auditLog: [
+      { id: 'a-001-1', action: 'created', performedBy: 'admin', timestamp: '2024-01-15T00:00:00Z', details: 'Rule created with amount > $10,000 condition' },
+      { id: 'a-001-2', action: 'updated', performedBy: 'analyst-1', timestamp: '2025-11-20T00:00:00Z', details: 'Added risk score condition and alert action' }
+    ]
   },
   {
     id: 'RULE-002',
     name: 'Velocity Check - Hourly',
-    description: 'More than 5 transactions in 1 hour',
+    description: 'More than 5 transactions from same customer in 1 hour',
     type: 'velocity',
     category: 'fraud',
-    condition: 'count(transactions, 1h) > threshold',
+    condition: 'velocity_count > 5 within 1h',
     threshold: 5,
     priority: 2,
     isActive: true,
+    severity: 'medium',
     createdAt: '2024-01-15T00:00:00Z',
     updatedAt: '2024-01-15T00:00:00Z',
-    triggeredCount: 156
+    triggeredCount: 156,
+    currentVersion: 1,
+    conditionGroup: {
+      id: 'cg-002',
+      logic: 'AND',
+      conditions: [
+        { id: 'c-002-1', field: 'velocity_count', operator: 'greater_than', value: 5, timeWindow: { value: 1, unit: 'hours' }, entityScope: 'customer' }
+      ]
+    },
+    actions: [{ type: 'flag' }, { type: 'require_review' }],
+    versions: [
+      { version: 1, conditionGroup: { id: 'cg-002', logic: 'AND', conditions: [{ id: 'c-002-1', field: 'velocity_count', operator: 'greater_than', value: 5, timeWindow: { value: 1, unit: 'hours' }, entityScope: 'customer' }] }, actions: [{ type: 'flag' }, { type: 'require_review' }], severity: 'medium', changedBy: 'admin', changedAt: '2024-01-15T00:00:00Z', changeNote: 'Initial creation' }
+    ],
+    auditLog: [
+      { id: 'a-002-1', action: 'created', performedBy: 'admin', timestamp: '2024-01-15T00:00:00Z', details: 'Velocity check rule created' }
+    ]
   },
   {
     id: 'RULE-003',
     name: 'Impossible Travel',
-    description: 'Transactions from locations > 500km apart within 1 hour',
+    description: 'Transactions from distant locations within short time window',
     type: 'geographic',
     category: 'fraud',
-    condition: 'geo_distance(last_txn, current_txn) > threshold AND time_diff < 1h',
+    condition: 'country != last_country AND time_diff < 1h',
     threshold: 500,
     priority: 1,
     isActive: true,
+    severity: 'critical',
     createdAt: '2024-01-15T00:00:00Z',
-    updatedAt: '2024-01-15T00:00:00Z',
-    triggeredCount: 34
+    updatedAt: '2024-06-10T00:00:00Z',
+    triggeredCount: 34,
+    currentVersion: 2,
+    conditionGroup: {
+      id: 'cg-003',
+      logic: 'AND',
+      conditions: [
+        { id: 'cg-003-nested', logic: 'OR', conditions: [
+          { id: 'c-003-1', field: 'country', operator: 'not_equals', value: 'last_country' },
+          { id: 'c-003-2', field: 'ip_address', operator: 'not_equals', value: 'last_ip' }
+        ] } satisfies RuleConditionGroup,
+        { id: 'c-003-3', field: 'amount', operator: 'greater_than', value: 500 }
+      ]
+    },
+    actions: [{ type: 'block' }, { type: 'alert', config: { team: 'fraud-ops' } }, { type: 'escalate' }],
+    versions: [
+      { version: 1, conditionGroup: { id: 'cg-003-v1', logic: 'AND', conditions: [{ id: 'c-003-v1-1', field: 'country', operator: 'not_equals', value: 'last_country' }] }, actions: [{ type: 'flag' }], severity: 'high', changedBy: 'admin', changedAt: '2024-01-15T00:00:00Z', changeNote: 'Initial rule' },
+      { version: 2, conditionGroup: { id: 'cg-003', logic: 'AND', conditions: [{ id: 'cg-003-nested', logic: 'OR' as const, conditions: [{ id: 'c-003-1', field: 'country', operator: 'not_equals', value: 'last_country' }, { id: 'c-003-2', field: 'ip_address', operator: 'not_equals', value: 'last_ip' }] }, { id: 'c-003-3', field: 'amount', operator: 'greater_than', value: 500 }] }, actions: [{ type: 'block' }, { type: 'alert', config: { team: 'fraud-ops' } }, { type: 'escalate' }], severity: 'critical', changedBy: 'analyst-2', changedAt: '2024-06-10T00:00:00Z', changeNote: 'Added IP check and block action' }
+    ],
+    auditLog: [
+      { id: 'a-003-1', action: 'created', performedBy: 'admin', timestamp: '2024-01-15T00:00:00Z', details: 'Impossible travel rule created' },
+      { id: 'a-003-2', action: 'updated', performedBy: 'analyst-2', timestamp: '2024-06-10T00:00:00Z', details: 'Enhanced with IP address check and block action' },
+      { id: 'a-003-3', action: 'simulated', performedBy: 'analyst-2', timestamp: '2024-06-09T00:00:00Z', details: 'Simulation run: 34 hits in 10,000 transactions (0.34% hit rate)' }
+    ]
   },
   {
     id: 'RULE-004',
     name: 'Structuring Detection',
-    description: 'Multiple transactions just below $10,000 threshold',
+    description: 'Multiple transactions just below $10,000 reporting threshold',
     type: 'amount',
     category: 'aml',
-    condition: 'count(transactions where amount > 9000 AND amount < 10000, 24h) > threshold',
+    condition: 'amount BETWEEN 9000 AND 10000 AND count > 3 in 24h',
     threshold: 3,
     priority: 1,
     isActive: true,
+    severity: 'critical',
     createdAt: '2024-01-15T00:00:00Z',
     updatedAt: '2024-01-15T00:00:00Z',
-    triggeredCount: 89
+    triggeredCount: 89,
+    currentVersion: 1,
+    conditionGroup: {
+      id: 'cg-004',
+      logic: 'AND',
+      conditions: [
+        { id: 'c-004-1', field: 'amount', operator: 'between', value: 9000, secondaryValue: 10000 },
+        { id: 'c-004-2', field: 'velocity_count', operator: 'greater_than', value: 3, timeWindow: { value: 24, unit: 'hours' }, entityScope: 'customer' }
+      ]
+    },
+    actions: [{ type: 'flag' }, { type: 'escalate' }, { type: 'notify', config: { team: 'aml-compliance' } }],
+    versions: [
+      { version: 1, conditionGroup: { id: 'cg-004', logic: 'AND', conditions: [{ id: 'c-004-1', field: 'amount', operator: 'between', value: 9000, secondaryValue: 10000 }, { id: 'c-004-2', field: 'velocity_count', operator: 'greater_than', value: 3, timeWindow: { value: 24, unit: 'hours' }, entityScope: 'customer' }] }, actions: [{ type: 'flag' }, { type: 'escalate' }, { type: 'notify', config: { team: 'aml-compliance' } }], severity: 'critical', changedBy: 'admin', changedAt: '2024-01-15T00:00:00Z', changeNote: 'Initial structuring detection rule' }
+    ],
+    auditLog: [
+      { id: 'a-004-1', action: 'created', performedBy: 'admin', timestamp: '2024-01-15T00:00:00Z', details: 'AML structuring detection rule created' }
+    ]
   },
   {
     id: 'RULE-005',
     name: 'High-Risk Country',
-    description: 'Transaction from FATF high-risk jurisdiction',
+    description: 'Transaction originating from FATF high-risk jurisdiction',
     type: 'geographic',
     category: 'aml',
     condition: 'country IN high_risk_countries',
     threshold: 0,
     priority: 2,
     isActive: true,
+    severity: 'medium',
     createdAt: '2024-01-15T00:00:00Z',
     updatedAt: '2024-01-15T00:00:00Z',
-    triggeredCount: 178
+    triggeredCount: 178,
+    currentVersion: 1,
+    conditionGroup: {
+      id: 'cg-005',
+      logic: 'AND',
+      conditions: [
+        { id: 'c-005-1', field: 'country', operator: 'in', value: 'Iran,North Korea,Myanmar,Syria' }
+      ]
+    },
+    actions: [{ type: 'flag' }, { type: 'require_review' }],
+    versions: [
+      { version: 1, conditionGroup: { id: 'cg-005', logic: 'AND', conditions: [{ id: 'c-005-1', field: 'country', operator: 'in', value: 'Iran,North Korea,Myanmar,Syria' }] }, actions: [{ type: 'flag' }, { type: 'require_review' }], severity: 'medium', changedBy: 'admin', changedAt: '2024-01-15T00:00:00Z', changeNote: 'Initial creation' }
+    ],
+    auditLog: [
+      { id: 'a-005-1', action: 'created', performedBy: 'admin', timestamp: '2024-01-15T00:00:00Z', details: 'High-risk country rule created' }
+    ]
   },
   {
     id: 'RULE-006',
     name: 'New Device + High Amount',
-    description: 'Transaction from new device exceeding $5,000',
+    description: 'Transaction from unrecognized device exceeding $5,000',
     type: 'device',
     category: 'fraud',
-    condition: 'is_new_device AND amount > threshold',
+    condition: 'is_new_device AND amount > 5000',
     threshold: 5000,
     priority: 1,
     isActive: true,
+    severity: 'high',
     createdAt: '2024-01-15T00:00:00Z',
     updatedAt: '2024-01-15T00:00:00Z',
-    triggeredCount: 67
+    triggeredCount: 67,
+    currentVersion: 1,
+    conditionGroup: {
+      id: 'cg-006',
+      logic: 'AND',
+      conditions: [
+        { id: 'c-006-1', field: 'device_id', operator: 'equals', value: 'new_device' },
+        { id: 'c-006-2', field: 'amount', operator: 'greater_than', value: 5000 }
+      ]
+    },
+    actions: [{ type: 'flag' }, { type: 'alert', config: { team: 'fraud-ops' } }],
+    versions: [
+      { version: 1, conditionGroup: { id: 'cg-006', logic: 'AND', conditions: [{ id: 'c-006-1', field: 'device_id', operator: 'equals', value: 'new_device' }, { id: 'c-006-2', field: 'amount', operator: 'greater_than', value: 5000 }] }, actions: [{ type: 'flag' }, { type: 'alert', config: { team: 'fraud-ops' } }], severity: 'high', changedBy: 'admin', changedAt: '2024-01-15T00:00:00Z', changeNote: 'Initial creation' }
+    ],
+    auditLog: [
+      { id: 'a-006-1', action: 'created', performedBy: 'admin', timestamp: '2024-01-15T00:00:00Z', details: 'New device high amount rule created' }
+    ]
   },
   {
     id: 'RULE-007',
-    name: 'After Hours Transaction',
+    name: 'After Hours High-Value',
     description: 'High-value transaction between 2 AM and 5 AM local time',
     type: 'time',
     category: 'fraud',
-    condition: 'time BETWEEN 02:00 AND 05:00 AND amount > threshold',
+    condition: 'time_hour BETWEEN 2 AND 5 AND amount > 1000',
     threshold: 1000,
     priority: 3,
-    isActive: true,
+    isActive: false,
+    severity: 'low',
     createdAt: '2024-01-15T00:00:00Z',
-    updatedAt: '2024-01-15T00:00:00Z',
-    triggeredCount: 123
+    updatedAt: '2025-08-01T00:00:00Z',
+    triggeredCount: 123,
+    currentVersion: 1,
+    conditionGroup: {
+      id: 'cg-007',
+      logic: 'AND',
+      conditions: [
+        { id: 'c-007-1', field: 'time_hour', operator: 'between', value: 2, secondaryValue: 5 },
+        { id: 'c-007-2', field: 'amount', operator: 'greater_than', value: 1000 }
+      ]
+    },
+    actions: [{ type: 'flag' }],
+    versions: [
+      { version: 1, conditionGroup: { id: 'cg-007', logic: 'AND', conditions: [{ id: 'c-007-1', field: 'time_hour', operator: 'between', value: 2, secondaryValue: 5 }, { id: 'c-007-2', field: 'amount', operator: 'greater_than', value: 1000 }] }, actions: [{ type: 'flag' }], severity: 'low', changedBy: 'admin', changedAt: '2024-01-15T00:00:00Z', changeNote: 'Initial creation' }
+    ],
+    auditLog: [
+      { id: 'a-007-1', action: 'created', performedBy: 'admin', timestamp: '2024-01-15T00:00:00Z', details: 'After hours rule created' },
+      { id: 'a-007-2', action: 'deactivated', performedBy: 'analyst-3', timestamp: '2025-08-01T00:00:00Z', details: 'Disabled due to high false positive rate' }
+    ]
   },
   {
     id: 'RULE-008',
     name: 'Rapid Fund Movement',
-    description: 'Inbound followed by outbound within 30 minutes',
+    description: 'Large inbound followed by rapid outbound within 30 minutes',
     type: 'velocity',
     category: 'aml',
-    condition: 'has_inbound(30m) AND is_outbound AND outbound_ratio > threshold',
+    condition: 'velocity_count > 2 within 30m AND amount > 5000',
     threshold: 0.9,
     priority: 1,
     isActive: true,
+    severity: 'critical',
     createdAt: '2024-01-15T00:00:00Z',
     updatedAt: '2024-01-15T00:00:00Z',
-    triggeredCount: 45
+    triggeredCount: 45,
+    currentVersion: 1,
+    conditionGroup: {
+      id: 'cg-008',
+      logic: 'AND',
+      conditions: [
+        { id: 'c-008-1', field: 'velocity_count', operator: 'greater_than', value: 2, timeWindow: { value: 30, unit: 'minutes' }, entityScope: 'account' },
+        { id: 'c-008-2', field: 'amount', operator: 'greater_than', value: 5000 }
+      ]
+    },
+    actions: [{ type: 'block' }, { type: 'escalate' }, { type: 'notify', config: { team: 'aml-compliance' } }],
+    versions: [
+      { version: 1, conditionGroup: { id: 'cg-008', logic: 'AND', conditions: [{ id: 'c-008-1', field: 'velocity_count', operator: 'greater_than', value: 2, timeWindow: { value: 30, unit: 'minutes' }, entityScope: 'account' }, { id: 'c-008-2', field: 'amount', operator: 'greater_than', value: 5000 }] }, actions: [{ type: 'block' }, { type: 'escalate' }, { type: 'notify', config: { team: 'aml-compliance' } }], severity: 'critical', changedBy: 'admin', changedAt: '2024-01-15T00:00:00Z', changeNote: 'Initial rapid fund movement rule' }
+    ],
+    auditLog: [
+      { id: 'a-008-1', action: 'created', performedBy: 'admin', timestamp: '2024-01-15T00:00:00Z', details: 'Rapid fund movement rule created' }
+    ]
   }
 ];
 
