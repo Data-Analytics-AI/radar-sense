@@ -90,7 +90,7 @@ function StatusDot({ status }: { status: 'healthy' | 'degraded' | 'down' | strin
   return <span className={`inline-block h-2.5 w-2.5 rounded-full ${color}`} />;
 }
 
-function SectionHeader({ icon: Icon, title, description, isDirty, onSave, onReset, saving }: {
+function SectionHeader({ icon: Icon, title, description, isDirty, onSave, onReset, saving, sectionId }: {
   icon: LucideIcon;
   title: string;
   description: string;
@@ -98,7 +98,9 @@ function SectionHeader({ icon: Icon, title, description, isDirty, onSave, onRese
   onSave: () => void;
   onReset: () => void;
   saving: boolean;
+  sectionId?: string;
 }) {
+  const prefix = sectionId || title.toLowerCase().replace(/\s+/g, '-');
   return (
     <div className="flex items-start justify-between mb-6">
       <div className="flex items-start gap-3">
@@ -116,10 +118,10 @@ function SectionHeader({ icon: Icon, title, description, isDirty, onSave, onRese
             <AlertTriangle className="h-3 w-3 mr-1" /> Unsaved changes
           </Badge>
         )}
-        <Button variant="outline" size="sm" onClick={onReset} data-testid="button-reset-section">
+        <Button variant="outline" size="sm" onClick={onReset} data-testid={`button-reset-${prefix}`}>
           <RotateCcw className="h-3.5 w-3.5 mr-1" /> Reset
         </Button>
-        <Button size="sm" onClick={onSave} disabled={!isDirty || saving} data-testid="button-save-section">
+        <Button size="sm" onClick={onSave} disabled={!isDirty || saving} data-testid={`button-save-${prefix}`}>
           <Save className="h-3.5 w-3.5 mr-1" /> {saving ? 'Saving...' : 'Save'}
         </Button>
       </div>
