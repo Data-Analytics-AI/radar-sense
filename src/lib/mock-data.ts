@@ -197,6 +197,39 @@ export const generateCases = (alerts: Alert[]): Case[] => {
       caseCount++;
     }
   });
+
+  if (cases.length === 0) {
+    const fallbackAlerts = alerts.slice(0, Math.min(alerts.length, 10));
+    const statuses: Array<'open' | 'in_review' | 'resolved' | 'escalated'> = ['open', 'in_review', 'escalated', 'resolved', 'open'];
+    const types: Array<'fraud' | 'aml' | 'mixed'> = ['fraud', 'aml', 'mixed', 'fraud', 'aml'];
+    const priorities: RiskLevel[] = ['critical', 'high', 'medium', 'high', 'critical'];
+    const tagSets = [
+      ['velocity', 'high-amount'],
+      ['geographic', 'new-device'],
+      ['structuring', 'aml'],
+      ['card-testing', 'bot-detected'],
+      ['cross-border', 'pep-linked']
+    ];
+
+    for (let i = 0; i < 5; i++) {
+      const alert = fallbackAlerts[i % fallbackAlerts.length];
+      cases.push({
+        id: `CASE-${(1001 + i).toString()}`,
+        type: types[i],
+        alertIds: alert ? [alert.id] : [`ALR-FALLBACK-${i}`],
+        transactionIds: alert ? [alert.transactionId] : [`TXN-FALLBACK-${i}`],
+        customerId: alert?.customerId || `CUST-${randomRange(1000, 9999)}`,
+        assignedTo: `analyst-${i + 1}`,
+        priority: priorities[i],
+        status: statuses[i],
+        createdAt: new Date(Date.now() - randomRange(1, 14) * 24 * 60 * 60 * 1000).toISOString(),
+        updatedAt: new Date().toISOString(),
+        dueDate: new Date(Date.now() + randomRange(1, 7) * 24 * 60 * 60 * 1000).toISOString(),
+        tags: tagSets[i],
+        notes: []
+      });
+    }
+  }
   
   return cases;
 };

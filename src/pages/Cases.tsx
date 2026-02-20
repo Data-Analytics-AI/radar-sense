@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { 
   Briefcase, 
   Search, 
@@ -22,9 +22,9 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { RiskScoreBadge } from '@/components/dashboard/RiskScoreBadge';
-import { NewCaseDialog } from '@/components/cases/NewCaseDialog';
+import { NewCaseDialog, NewCaseData } from '@/components/cases/NewCaseDialog';
 import { generateTransactions, generateAlerts, generateCases } from '@/lib/mock-data';
-import { Case, CaseStatus } from '@/types';
+import { Case, CaseStatus, RiskLevel } from '@/types';
 import { formatDistanceToNow, differenceInDays, differenceInHours } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -37,10 +37,31 @@ const Cases = () => {
   const [isNewCaseOpen, setIsNewCaseOpen] = useState(false);
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
   
-  const cases = useMemo(() => {
+  const initialCases = useMemo(() => {
     const transactions = generateTransactions(200);
     const alerts = generateAlerts(transactions);
     return generateCases(alerts);
+  }, []);
+
+  const [cases, setCases] = useState<Case[]>(initialCases);
+
+  const handleCaseCreated = useCallback((data: NewCaseData) => {
+    const newCase: Case = {
+      id: `CASE-${Date.now().toString(36).toUpperCase()}`,
+      type: data.type,
+      alertIds: [],
+      transactionIds: [],
+      customerId: data.customerId,
+      assignedTo: undefined,
+      priority: data.priority as RiskLevel,
+      status: 'open',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      tags: data.tags,
+      notes: [],
+    };
+    setCases(prev => [newCase, ...prev]);
   }, []);
   
   const filteredCases = useMemo(() => {
@@ -467,7 +488,7 @@ const Cases = () => {
         </div>
       )}
       
-      <NewCaseDialog open={isNewCaseOpen} onOpenChange={setIsNewCaseOpen} />
+      <NewCaseDialog open={isNewCaseOpen} onOpenChange={setIsNewCaseOpen} onCaseCreated={handleCaseCreated} />
     </div>
   );
 };
