@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Briefcase, 
   Search, 
@@ -23,7 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { RiskScoreBadge } from '@/components/dashboard/RiskScoreBadge';
 import { NewCaseDialog, NewCaseData } from '@/components/cases/NewCaseDialog';
-import { generateTransactions, generateAlerts, generateCases } from '@/lib/mock-data';
+import { getCachedMockData } from '@/lib/mock-data';
 import { Case, CaseStatus, RiskLevel } from '@/types';
 import { formatDistanceToNow, differenceInDays, differenceInHours } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -33,21 +34,23 @@ import {
 } from 'recharts';
 
 const Cases = () => {
+  const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<CaseStatus | 'all'>('all');
   const [isNewCaseOpen, setIsNewCaseOpen] = useState(false);
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
   
   const initialCases = useMemo(() => {
-    const transactions = generateTransactions(200);
-    const alerts = generateAlerts(transactions);
-    return generateCases(alerts);
+    const data = getCachedMockData();
+    return data.cases;
   }, []);
 
   const [cases, setCases] = useState<Case[]>(initialCases);
 
   const handleCaseCreated = useCallback((data: NewCaseData) => {
+    const caseId = `CASE-${Date.now().toString(36).toUpperCase()}`;
+    const now = new Date().toISOString();
     const newCase: Case = {
-      id: `CASE-${Date.now().toString(36).toUpperCase()}`,
+      id: caseId,
       type: data.type,
       alertIds: [],
       transactionIds: [],
@@ -55,11 +58,15 @@ const Cases = () => {
       assignedTo: undefined,
       priority: data.priority as RiskLevel,
       status: 'open',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
       dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       tags: data.tags,
       notes: [],
+      timeline: [{ id: `tl-${caseId}-1`, type: 'case_created', title: 'Case Created', description: 'Manual case creation', performedBy: 'John Doe', timestamp: now }],
+      linkedEntities: [],
+      evidence: [],
+      description: data.description,
     };
     setCases(prev => [newCase, ...prev]);
   }, []);
@@ -74,7 +81,7 @@ const Cases = () => {
     const open = cases.filter(c => c.status === 'open');
     const inReview = cases.filter(c => c.status === 'in_review');
     const escalated = cases.filter(c => c.status === 'escalated');
-    const resolved = cases.filter(c => c.status === 'resolved');
+    const resolved = cases.filter(c => c.status === 'closed');
 
     const avgAgeHours = open.length > 0
       ? Math.round(open.reduce((sum, c) => sum + differenceInHours(new Date(), new Date(c.createdAt)), 0) / open.length)
@@ -117,7 +124,7 @@ const Cases = () => {
     switch (status) {
       case 'open': return 'bg-primary/20 text-primary border-primary/30';
       case 'in_review': return 'bg-warning/20 text-warning border-warning/30';
-      case 'resolved': return 'bg-success/20 text-success border-success/30';
+      case 'closed': return 'bg-success/20 text-success border-success/30';
       case 'escalated': return 'bg-destructive/20 text-destructive border-destructive/30';
     }
   };
@@ -204,7 +211,7 @@ const Cases = () => {
         </div>
         <div className="stat-card border-l-4 border-l-success">
           <div className="flex items-center justify-between mb-1">
-            <p className="text-sm text-muted-foreground">Resolved</p>
+            <p className="text-sm text-muted-foreground">Closed</p>
             <CheckCircle2 className="h-4 w-4 text-success" />
           </div>
           <p className="text-3xl font-bold">{summaryStats.resolved.length}</p>
@@ -266,7 +273,7 @@ const Cases = () => {
           <h3 className="text-sm font-medium text-muted-foreground mb-3">Analyst Workload</h3>
           <div className="space-y-3 mt-2">
             {['analyst-1', 'analyst-2', 'analyst-3', 'analyst-4', 'analyst-5'].map(analyst => {
-              const count = cases.filter(c => c.assignedTo === analyst && c.status !== 'resolved').length;
+              const count = cases.filter(c => c.assignedTo === analyst && c.status !== 'closed').length;
               return (
                 <div key={analyst} className="flex items-center gap-3">
                   <span className="text-xs text-muted-foreground w-20 truncate capitalize">{analyst.replace('-', ' ')}</span>
@@ -286,7 +293,7 @@ const Cases = () => {
           <Input placeholder="Search cases..." className="pl-9" />
         </div>
         <div className="flex items-center gap-2">
-          {(['all', 'open', 'in_review', 'escalated', 'resolved'] as const).map((status) => (
+          {(['all', 'open', 'in_review', 'escalated', 'closed'] as const).map((status) => (
             <Button
               key={status}
               variant={statusFilter === status ? 'default' : 'outline'}
@@ -472,7 +479,7 @@ const Cases = () => {
                   <AlertTriangle className="h-3.5 w-3.5 mr-2" />
                   Explain Escalation Rationale
                 </Button>
-                <Button size="sm" className="w-full text-xs mt-2">
+                <Button size="sm" className="w-full text-xs mt-2" data-testid="button-open-investigation" onClick={() => navigate(`/cases/${selectedCase.id}`)}>
                   Open Full Investigation
                 </Button>
               </div>

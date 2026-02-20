@@ -34,6 +34,7 @@ server/
 - Live Monitoring - Real-time transaction feed
 - Alerts - Alert management and investigation
 - Cases - Case management and tracking
+- Case Investigation (/cases/:id) - Full investigation workspace with timeline, entities, evidence, notes, export
 - Transactions - Transaction search and analysis
 - Analytics - Charts and analytics
 - Graph Network - Network analysis visualization
@@ -57,6 +58,19 @@ server/
   - `OPENAI_API_KEY` - Standard OpenAI API key (fallback if Azure not configured)
 
 ## Recent Changes
+- 2026-02-20: Built comprehensive Case Investigation workspace
+  - Expanded Case types: CaseTimelineEvent, LinkedEntity (vendor/employee/contract/invoice), Evidence with custody chain, CaseResolution
+  - Changed CaseStatus from 'resolved' to 'closed' for proper workflow (Open → In Review → Escalated → Closed)
+  - Rich mock data generation: timeline events, linked entities, evidence files with custody chains, investigator notes
+  - New CaseInvestigation page at /cases/:caseId with 5 tabs:
+    - Timeline: color-coded vertical timeline (alert → investigation → resolution)
+    - Entities: linked vendor/employee/contract/invoice cards with add entity dialog
+    - Evidence: file cards with source attribution, custody chain, upload dialog, tag management
+    - Notes: investigator notes feed with add note form, type selection, mentions
+    - Export: audit-ready PDF/CSV export (full report, evidence log, timeline, notes)
+  - Status workflow buttons with state transitions that add timeline events
+  - Shared cached mock data via getCachedMockData() for consistent case IDs across pages
+  - "Open Full Investigation" button on Cases page navigates to investigation workspace
 - 2026-02-20: Built comprehensive visual Rule Engine Builder
   - Expanded Rule types: RuleCondition trees, RuleConditionGroup (recursive AND/OR), RuleAction, RuleVersion, RuleAuditEntry, SeverityLevel
   - Updated mock data with rich sample rules including nested condition groups, versions, and audit logs

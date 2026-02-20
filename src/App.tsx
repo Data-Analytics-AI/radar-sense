@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import LiveMonitoring from "./pages/LiveMonitoring";
 import Alerts from "./pages/Alerts";
 import Cases from "./pages/Cases";
+import CaseInvestigation from "./pages/CaseInvestigation";
 import Transactions from "./pages/Transactions";
 import Analytics from "./pages/Analytics";
 import Rules from "./pages/Rules";
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/monitoring" element={<LiveMonitoring />} />
             <Route path="/alerts" element={<Alerts />} />
             <Route path="/cases" element={<Cases />} />
+            <Route path="/cases/:caseId" element={<CaseInvestigation />} />
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/rules" element={<Rules />} />

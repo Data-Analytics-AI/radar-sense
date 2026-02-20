@@ -2,6 +2,12 @@ import {
   Transaction, 
   Alert, 
   Case, 
+  CaseNote,
+  CaseStatus,
+  CaseType,
+  CaseTimelineEvent,
+  LinkedEntity,
+  Evidence,
   Customer, 
   Rule, 
   RuleConditionGroup,
@@ -167,6 +173,305 @@ export const generateAlerts = (transactions: Transaction[]): Alert[] => {
 };
 
 // Generate cases
+const generateCaseTimeline = (caseId: string, createdAt: string, status: CaseStatus, assignedTo: string | undefined, alertCount: number): CaseTimelineEvent[] => {
+  const events: CaseTimelineEvent[] = [];
+  const baseTime = new Date(createdAt).getTime();
+
+  events.push({
+    id: `tl-${caseId}-1`,
+    type: 'alert_triggered',
+    title: 'Alert Triggered',
+    description: `${alertCount} alert(s) triggered automated case creation`,
+    performedBy: 'system',
+    timestamp: new Date(baseTime).toISOString(),
+    metadata: { alertCount: String(alertCount) }
+  });
+
+  events.push({
+    id: `tl-${caseId}-2`,
+    type: 'case_created',
+    title: 'Case Opened',
+    description: 'Case created and queued for investigation',
+    performedBy: 'system',
+    timestamp: new Date(baseTime + 60000).toISOString()
+  });
+
+  if (assignedTo) {
+    events.push({
+      id: `tl-${caseId}-3`,
+      type: 'assigned',
+      title: `Assigned to ${assignedTo.replace('-', ' ')}`,
+      description: 'Auto-assigned by workload balancer',
+      performedBy: 'system',
+      timestamp: new Date(baseTime + 120000).toISOString(),
+      metadata: { assignee: assignedTo }
+    });
+  }
+
+  if (status === 'in_review' || status === 'escalated' || status === 'closed') {
+    events.push({
+      id: `tl-${caseId}-4`,
+      type: 'status_change',
+      title: 'Investigation Started',
+      description: 'Case moved to In Review status',
+      performedBy: assignedTo || 'analyst-1',
+      timestamp: new Date(baseTime + 3600000).toISOString(),
+      metadata: { from: 'open', to: 'in_review' }
+    });
+
+    events.push({
+      id: `tl-${caseId}-5`,
+      type: 'evidence_added',
+      title: 'Evidence Attached',
+      description: 'Transaction logs and system reports attached',
+      performedBy: assignedTo || 'analyst-1',
+      timestamp: new Date(baseTime + 7200000).toISOString()
+    });
+
+    events.push({
+      id: `tl-${caseId}-6`,
+      type: 'note_added',
+      title: 'Investigation Note Added',
+      description: 'Analyst documented initial findings',
+      performedBy: assignedTo || 'analyst-1',
+      timestamp: new Date(baseTime + 14400000).toISOString()
+    });
+  }
+
+  if (status === 'escalated') {
+    events.push({
+      id: `tl-${caseId}-7`,
+      type: 'escalated',
+      title: 'Case Escalated',
+      description: 'Escalated to senior compliance team for review',
+      performedBy: assignedTo || 'analyst-1',
+      timestamp: new Date(baseTime + 28800000).toISOString(),
+      metadata: { reason: 'High risk indicators detected' }
+    });
+  }
+
+  if (status === 'closed') {
+    events.push({
+      id: `tl-${caseId}-8`,
+      type: 'resolution',
+      title: 'Case Resolved',
+      description: 'Investigation completed and case closed',
+      performedBy: assignedTo || 'analyst-1',
+      timestamp: new Date(baseTime + 86400000).toISOString(),
+      metadata: { outcome: 'fraud_confirmed' }
+    });
+  }
+
+  return events;
+};
+
+const generateLinkedEntities = (caseId: string, caseType: CaseType): LinkedEntity[] => {
+  const entities: LinkedEntity[] = [];
+  const vendorNames = ['TechCorp Ltd', 'Global Payments Inc', 'FastShip Logistics', 'Digital Services Co', 'Oceanic Trading'];
+  const employeeNames = ['Sarah Chen', 'Michael Torres', 'Emily Watson', 'James Kim', 'Priya Patel'];
+  const contractRefs = ['CNTR-2024-0891', 'CNTR-2024-1247', 'CNTR-2023-0456'];
+  const invoiceRefs = ['INV-2025-00342', 'INV-2025-00567', 'INV-2024-01234'];
+
+  const hash = caseId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  const entityCount = (hash % 3) + 2;
+
+  for (let i = 0; i < entityCount; i++) {
+    const idx = (hash + i) % 5;
+    if (i === 0) {
+      entities.push({
+        id: `ent-${caseId}-${i}`,
+        type: 'vendor',
+        name: vendorNames[idx],
+        reference: `VND-${1000 + idx}`,
+        relationship: randomItem(['payee', 'merchant', 'intermediary']),
+        riskIndicator: caseType === 'aml' ? 'high' : 'medium',
+        addedBy: 'system',
+        addedAt: new Date(Date.now() - randomRange(1, 10) * 86400000).toISOString(),
+        notes: 'Flagged in previous investigations'
+      });
+    } else if (i === 1) {
+      entities.push({
+        id: `ent-${caseId}-${i}`,
+        type: 'employee',
+        name: employeeNames[idx],
+        reference: `EMP-${2000 + idx}`,
+        relationship: 'account_manager',
+        addedBy: `analyst-${(idx % 5) + 1}`,
+        addedAt: new Date(Date.now() - randomRange(1, 5) * 86400000).toISOString()
+      });
+    } else if (i === 2) {
+      entities.push({
+        id: `ent-${caseId}-${i}`,
+        type: 'contract',
+        name: `Service Agreement - ${vendorNames[idx]}`,
+        reference: contractRefs[idx % contractRefs.length],
+        relationship: 'associated_contract',
+        addedBy: `analyst-${(idx % 5) + 1}`,
+        addedAt: new Date(Date.now() - randomRange(1, 7) * 86400000).toISOString()
+      });
+    } else {
+      entities.push({
+        id: `ent-${caseId}-${i}`,
+        type: 'invoice',
+        name: `Invoice from ${vendorNames[idx]}`,
+        reference: invoiceRefs[idx % invoiceRefs.length],
+        relationship: 'linked_payment',
+        riskIndicator: 'low',
+        addedBy: 'system',
+        addedAt: new Date(Date.now() - randomRange(1, 3) * 86400000).toISOString()
+      });
+    }
+  }
+
+  return entities;
+};
+
+const generateEvidence = (caseId: string, createdAt: string): Evidence[] => {
+  const baseTime = new Date(createdAt).getTime();
+  const evidence: Evidence[] = [];
+  const hash = caseId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+
+  const systemEvidence: Evidence[] = [
+    {
+      id: `ev-${caseId}-1`,
+      caseId,
+      fileName: 'transaction_log_export.csv',
+      fileType: 'transaction_log',
+      fileSize: 245760,
+      mimeType: 'text/csv',
+      source: 'system_generated',
+      sourceAttribution: 'SnapFort Transaction Monitor',
+      tags: ['transactions', 'auto-generated'],
+      description: 'Exported transaction log for flagged period',
+      uploadedBy: 'system',
+      uploadedAt: new Date(baseTime + 300000).toISOString(),
+      custodyChain: [
+        { action: 'uploaded', performedBy: 'system', timestamp: new Date(baseTime + 300000).toISOString(), details: 'Auto-generated by alert trigger' },
+        { action: 'viewed', performedBy: `analyst-${(hash % 5) + 1}`, timestamp: new Date(baseTime + 3600000).toISOString() }
+      ]
+    },
+    {
+      id: `ev-${caseId}-2`,
+      caseId,
+      fileName: 'risk_assessment_report.pdf',
+      fileType: 'report',
+      fileSize: 1048576,
+      mimeType: 'application/pdf',
+      source: 'system_generated',
+      sourceAttribution: 'SnapFort Risk Engine',
+      tags: ['risk-assessment', 'auto-generated', 'ml-analysis'],
+      description: 'ML-generated risk assessment with contributing factors',
+      uploadedBy: 'system',
+      uploadedAt: new Date(baseTime + 600000).toISOString(),
+      custodyChain: [
+        { action: 'uploaded', performedBy: 'system', timestamp: new Date(baseTime + 600000).toISOString(), details: 'Auto-generated risk assessment' },
+        { action: 'viewed', performedBy: `analyst-${(hash % 5) + 1}`, timestamp: new Date(baseTime + 3700000).toISOString() },
+        { action: 'downloaded', performedBy: `analyst-${(hash % 5) + 1}`, timestamp: new Date(baseTime + 7200000).toISOString(), details: 'Downloaded for compliance review' }
+      ]
+    }
+  ];
+
+  evidence.push(...systemEvidence);
+
+  if (hash % 3 === 0) {
+    evidence.push({
+      id: `ev-${caseId}-3`,
+      caseId,
+      fileName: 'customer_communication_screenshot.png',
+      fileType: 'screenshot',
+      fileSize: 524288,
+      mimeType: 'image/png',
+      source: 'manual_upload',
+      sourceAttribution: `Analyst ${(hash % 5) + 1}`,
+      tags: ['customer-communication', 'manual'],
+      description: 'Screenshot of suspicious customer communication',
+      uploadedBy: `analyst-${(hash % 5) + 1}`,
+      uploadedAt: new Date(baseTime + 14400000).toISOString(),
+      custodyChain: [
+        { action: 'uploaded', performedBy: `analyst-${(hash % 5) + 1}`, timestamp: new Date(baseTime + 14400000).toISOString(), details: 'Manually uploaded during investigation' },
+        { action: 'tagged', performedBy: `analyst-${(hash % 5) + 1}`, timestamp: new Date(baseTime + 14500000).toISOString(), details: 'Tagged as customer-communication' }
+      ]
+    });
+  }
+
+  if (hash % 2 === 0) {
+    evidence.push({
+      id: `ev-${caseId}-4`,
+      caseId,
+      fileName: 'external_watchlist_match.pdf',
+      fileType: 'document',
+      fileSize: 204800,
+      mimeType: 'application/pdf',
+      source: 'external_feed',
+      sourceAttribution: 'OFAC Sanctions List',
+      tags: ['sanctions', 'external', 'watchlist'],
+      description: 'External sanctions list match report',
+      uploadedBy: 'system',
+      uploadedAt: new Date(baseTime + 900000).toISOString(),
+      custodyChain: [
+        { action: 'uploaded', performedBy: 'system', timestamp: new Date(baseTime + 900000).toISOString(), details: 'Imported from external feed' },
+        { action: 'viewed', performedBy: `analyst-${(hash % 5) + 1}`, timestamp: new Date(baseTime + 5400000).toISOString() }
+      ]
+    });
+  }
+
+  evidence.push({
+    id: `ev-${caseId}-5`,
+    caseId,
+    fileName: 'investigation_notes.docx',
+    fileType: 'document',
+    fileSize: 102400,
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    source: 'manual_upload',
+    sourceAttribution: `Analyst ${(hash % 5) + 1}`,
+    tags: ['notes', 'investigation', 'manual'],
+    description: 'Detailed investigation notes and findings',
+    uploadedBy: `analyst-${(hash % 5) + 1}`,
+    uploadedAt: new Date(baseTime + 28800000).toISOString(),
+    custodyChain: [
+      { action: 'uploaded', performedBy: `analyst-${(hash % 5) + 1}`, timestamp: new Date(baseTime + 28800000).toISOString(), details: 'Investigation documentation' }
+    ]
+  });
+
+  return evidence;
+};
+
+const generateCaseNotes = (caseId: string, assignedTo: string | undefined, createdAt: string): CaseNote[] => {
+  const baseTime = new Date(createdAt).getTime();
+  const analyst = assignedTo || 'analyst-1';
+  const notes: CaseNote[] = [
+    {
+      id: `note-${caseId}-1`,
+      caseId,
+      authorId: analyst,
+      authorName: analyst.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      content: 'Initial review completed. Transaction patterns show unusual velocity and amount distribution. Proceeding with deeper investigation into linked accounts.',
+      timestamp: new Date(baseTime + 7200000).toISOString(),
+      type: 'comment'
+    },
+    {
+      id: `note-${caseId}-2`,
+      caseId,
+      authorId: 'system',
+      authorName: 'System',
+      content: 'Automated risk assessment attached. ML model confidence: 87%. Top contributing factors: velocity anomaly, geographic mismatch, device fingerprint change.',
+      timestamp: new Date(baseTime + 600000).toISOString(),
+      type: 'evidence'
+    },
+    {
+      id: `note-${caseId}-3`,
+      caseId,
+      authorId: analyst,
+      authorName: analyst.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      content: 'Contacted customer via secure channel. Customer denies transactions. Initiating chargeback process and flagging account for enhanced monitoring.',
+      timestamp: new Date(baseTime + 14400000).toISOString(),
+      type: 'action_taken',
+      mentions: ['compliance-team']
+    }
+  ];
+  return notes;
+};
+
 export const generateCases = (alerts: Alert[]): Case[] => {
   const cases: Case[] = [];
   const groupedAlerts = new Map<string, Alert[]>();
@@ -180,20 +485,29 @@ export const generateCases = (alerts: Alert[]): Case[] => {
   let caseCount = 0;
   groupedAlerts.forEach((customerAlerts, customerId) => {
     if (customerAlerts.length >= 2 && caseCount < 20) {
+      const caseId = `CASE-${generateId().toUpperCase()}`;
+      const status: CaseStatus = randomItem(['open', 'in_review', 'closed']);
+      const assignedTo = `analyst-${randomRange(1, 5)}`;
+      const createdAt = customerAlerts[0].createdAt;
+      const caseType: CaseType = randomItem(['fraud', 'aml', 'mixed']);
       cases.push({
-        id: `CASE-${generateId().toUpperCase()}`,
-        type: randomItem(['fraud', 'aml', 'mixed']),
+        id: caseId,
+        type: caseType,
         alertIds: customerAlerts.slice(0, 5).map(a => a.id),
         transactionIds: customerAlerts.slice(0, 5).map(a => a.transactionId),
         customerId,
-        assignedTo: `analyst-${randomRange(1, 5)}`,
+        assignedTo,
         priority: randomItem(['medium', 'high', 'critical']),
-        status: randomItem(['open', 'in_review', 'resolved']),
-        createdAt: customerAlerts[0].createdAt,
+        status,
+        createdAt,
         updatedAt: new Date().toISOString(),
         dueDate: new Date(Date.now() + randomRange(1, 7) * 24 * 60 * 60 * 1000).toISOString(),
         tags: randomItem([['velocity', 'high-amount'], ['geographic', 'new-device'], ['structuring', 'aml']]),
-        notes: []
+        notes: generateCaseNotes(caseId, assignedTo, createdAt),
+        timeline: generateCaseTimeline(caseId, createdAt, status, assignedTo, customerAlerts.length),
+        linkedEntities: generateLinkedEntities(caseId, caseType),
+        evidence: generateEvidence(caseId, createdAt),
+        description: `Investigation into suspicious ${caseType} activity for customer ${customerId}`
       });
       caseCount++;
     }
@@ -201,8 +515,8 @@ export const generateCases = (alerts: Alert[]): Case[] => {
 
   if (cases.length === 0) {
     const fallbackAlerts = alerts.slice(0, Math.min(alerts.length, 10));
-    const statuses: Array<'open' | 'in_review' | 'resolved' | 'escalated'> = ['open', 'in_review', 'escalated', 'resolved', 'open'];
-    const types: Array<'fraud' | 'aml' | 'mixed'> = ['fraud', 'aml', 'mixed', 'fraud', 'aml'];
+    const statuses: CaseStatus[] = ['open', 'in_review', 'escalated', 'closed', 'open'];
+    const types: CaseType[] = ['fraud', 'aml', 'mixed', 'fraud', 'aml'];
     const priorities: RiskLevel[] = ['critical', 'high', 'medium', 'high', 'critical'];
     const tagSets = [
       ['velocity', 'high-amount'],
@@ -214,20 +528,27 @@ export const generateCases = (alerts: Alert[]): Case[] => {
 
     for (let i = 0; i < 5; i++) {
       const alert = fallbackAlerts[i % fallbackAlerts.length];
+      const caseId = `CASE-${(1001 + i).toString()}`;
+      const createdAt = new Date(Date.now() - randomRange(1, 14) * 24 * 60 * 60 * 1000).toISOString();
+      const assignedTo = `analyst-${i + 1}`;
       cases.push({
-        id: `CASE-${(1001 + i).toString()}`,
+        id: caseId,
         type: types[i],
         alertIds: alert ? [alert.id] : [`ALR-FALLBACK-${i}`],
         transactionIds: alert ? [alert.transactionId] : [`TXN-FALLBACK-${i}`],
         customerId: alert?.customerId || `CUST-${randomRange(1000, 9999)}`,
-        assignedTo: `analyst-${i + 1}`,
+        assignedTo,
         priority: priorities[i],
         status: statuses[i],
-        createdAt: new Date(Date.now() - randomRange(1, 14) * 24 * 60 * 60 * 1000).toISOString(),
+        createdAt,
         updatedAt: new Date().toISOString(),
         dueDate: new Date(Date.now() + randomRange(1, 7) * 24 * 60 * 60 * 1000).toISOString(),
         tags: tagSets[i],
-        notes: []
+        notes: generateCaseNotes(caseId, assignedTo, createdAt),
+        timeline: generateCaseTimeline(caseId, createdAt, statuses[i], assignedTo, 1),
+        linkedEntities: generateLinkedEntities(caseId, types[i]),
+        evidence: generateEvidence(caseId, createdAt),
+        description: `Investigation into suspicious ${types[i]} activity`
       });
     }
   }
@@ -704,4 +1025,13 @@ export const initializeMockData = () => {
     models,
     stats
   };
+};
+
+let _cachedData: ReturnType<typeof initializeMockData> | null = null;
+
+export const getCachedMockData = () => {
+  if (!_cachedData) {
+    _cachedData = initializeMockData();
+  }
+  return _cachedData;
 };

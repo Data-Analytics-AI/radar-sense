@@ -3,7 +3,7 @@
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 export type AlertStatus = 'open' | 'under_investigation' | 'escalated' | 'closed';
 export type AlertResolution = 'fraud_confirmed' | 'false_positive' | 'legitimate' | 'pending';
-export type CaseStatus = 'open' | 'in_review' | 'resolved' | 'escalated';
+export type CaseStatus = 'open' | 'in_review' | 'escalated' | 'closed';
 export type CaseType = 'fraud' | 'aml' | 'mixed';
 export type CasePriority = 'low' | 'medium' | 'high' | 'critical';
 export type TransactionStatus = 'pending' | 'completed' | 'declined' | 'reversed';
@@ -75,9 +75,13 @@ export interface Case {
   createdAt: string;
   updatedAt: string;
   dueDate?: string;
-  resolution?: string;
+  resolution?: CaseResolution;
   tags: string[];
   notes: CaseNote[];
+  timeline: CaseTimelineEvent[];
+  linkedEntities: LinkedEntity[];
+  evidence: Evidence[];
+  description?: string;
 }
 
 export interface CaseNote {
@@ -88,6 +92,68 @@ export interface CaseNote {
   content: string;
   timestamp: string;
   type: 'comment' | 'evidence' | 'action_taken';
+  mentions?: string[];
+}
+
+export type TimelineEventType = 'alert_triggered' | 'case_created' | 'assigned' | 'status_change' | 'evidence_added' | 'note_added' | 'entity_linked' | 'escalated' | 'resolution';
+
+export interface CaseTimelineEvent {
+  id: string;
+  type: TimelineEventType;
+  title: string;
+  description: string;
+  performedBy: string;
+  timestamp: string;
+  metadata?: Record<string, string>;
+}
+
+export type LinkedEntityType = 'vendor' | 'employee' | 'contract' | 'invoice' | 'account' | 'customer';
+
+export interface LinkedEntity {
+  id: string;
+  type: LinkedEntityType;
+  name: string;
+  reference: string;
+  relationship: string;
+  riskIndicator?: RiskLevel;
+  addedBy: string;
+  addedAt: string;
+  notes?: string;
+}
+
+export type EvidenceSourceType = 'system_generated' | 'manual_upload' | 'external_feed';
+export type EvidenceFileType = 'document' | 'screenshot' | 'transaction_log' | 'email' | 'report' | 'other';
+
+export interface EvidenceCustodyEntry {
+  action: 'uploaded' | 'viewed' | 'downloaded' | 'tagged' | 'exported';
+  performedBy: string;
+  timestamp: string;
+  details?: string;
+}
+
+export interface Evidence {
+  id: string;
+  caseId: string;
+  fileName: string;
+  fileType: EvidenceFileType;
+  fileSize: number;
+  mimeType: string;
+  source: EvidenceSourceType;
+  sourceAttribution: string;
+  tags: string[];
+  description: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  custodyChain: EvidenceCustodyEntry[];
+}
+
+export interface CaseResolution {
+  outcome: 'fraud_confirmed' | 'false_positive' | 'suspicious_activity_reported' | 'no_action_required' | 'referred_to_law_enforcement';
+  summary: string;
+  resolvedBy: string;
+  resolvedAt: string;
+  sarFiled?: boolean;
+  sarReference?: string;
 }
 
 export interface Customer {
