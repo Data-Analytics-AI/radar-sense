@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const app = express();
 app.use(cors());
@@ -141,7 +143,17 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-const PORT = 3001;
+const isProduction = process.env.NODE_ENV === "production";
+
+if (isProduction) {
+  const distPath = path.resolve(process.cwd(), "dist", "public");
+  app.use(express.static(distPath, { maxAge: "1d" }));
+  app.get("*", (_req, res) => {
+    res.sendFile(path.join(distPath, "index.html"));
+  });
+}
+
+const PORT = isProduction ? 5000 : 3001;
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`API server running on port ${PORT}`);
 });

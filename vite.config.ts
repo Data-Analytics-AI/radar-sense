@@ -17,6 +17,10 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
+  build: {
+    outDir: "dist/public",
+    emptyOutDir: true,
+  },
   plugins: [react()],
   resolve: {
     alias: {
