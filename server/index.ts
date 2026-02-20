@@ -18,74 +18,101 @@ Always provide clear, concise, and actionable insights. When discussing specific
 
 Format your responses with markdown for better readability. Use bullet points for lists and bold text for important terms.`;
 
-function getAIConfig(): { provider: string; url: string; headers: Record<string, string> } | null {
+type AIConfig = { provider: string; url: string; headers: Record<string, string> };
+
+function getAIConfigs(): AIConfig[] {
+  const configs: AIConfig[] = [];
+
   const azureKey = process.env.AZURE_OPENAI_API_KEY;
   const azureEndpoint = process.env.AZURE_OPENAI_ENDPOINT;
   const azureDeployment = process.env.AZURE_OPENAI_DEPLOYMENT;
 
   if (azureKey && azureEndpoint && azureDeployment) {
     const baseUrl = azureEndpoint.replace(/\/$/, "");
-    return {
+    configs.push({
       provider: "azure",
       url: `${baseUrl}/openai/deployments/${azureDeployment}/chat/completions?api-version=2024-08-01-preview`,
       headers: {
         "api-key": azureKey,
         "Content-Type": "application/json",
       },
-    };
+    });
   }
 
   const openaiKey = process.env.OPENAI_API_KEY;
   if (openaiKey) {
-    return {
+    configs.push({
       provider: "openai",
       url: "https://api.openai.com/v1/chat/completions",
       headers: {
         "Authorization": `Bearer ${openaiKey}`,
         "Content-Type": "application/json",
       },
-    };
+    });
   }
 
-  return null;
+  return configs;
+}
+
+async function tryAIRequest(config: AIConfig, messages: unknown[]): Promise<Response> {
+  const body: Record<string, unknown> = {
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      ...messages,
+    ],
+    stream: true,
+  };
+
+  if (config.provider === "openai") {
+    body.model = "gpt-4o-mini";
+  }
+
+  return fetch(config.url, {
+    method: "POST",
+    headers: config.headers,
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(10000),
+  });
 }
 
 app.post("/api/chat", async (req, res) => {
   try {
     const { messages } = req.body;
-    const config = getAIConfig();
+    const configs = getAIConfigs();
 
-    if (!config) {
+    if (configs.length === 0) {
       return res.status(500).json({ error: "No AI provider configured. Set Azure OpenAI or OpenAI API keys." });
     }
 
-    const body: Record<string, unknown> = {
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        ...messages,
-      ],
-      stream: true,
-    };
+    let response: Response | null = null;
+    let usedProvider = "";
 
-    if (config.provider === "openai") {
-      body.model = "gpt-4o-mini";
+    for (const config of configs) {
+      try {
+        console.log(`Trying ${config.provider} AI provider...`);
+        response = await tryAIRequest(config, messages);
+        usedProvider = config.provider;
+
+        if (response.ok) {
+          console.log(`Successfully connected to ${config.provider}`);
+          break;
+        }
+
+        if (response.status === 429) {
+          return res.status(429).json({ error: "Rate limit exceeded. Please try again in a moment." });
+        }
+
+        const errorText = await response.text();
+        console.warn(`${config.provider} returned ${response.status}: ${errorText}`);
+        response = null;
+      } catch (err) {
+        console.warn(`${config.provider} failed: ${err instanceof Error ? err.message : err}`);
+        response = null;
+      }
     }
 
-    console.log(`Using ${config.provider} AI provider`);
-
-    const response = await fetch(config.url, {
-      method: "POST",
-      headers: config.headers,
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        return res.status(429).json({ error: "Rate limit exceeded. Please try again in a moment." });
-      }
-      const errorText = await response.text();
-      console.error("AI API error:", response.status, errorText);
-      return res.status(500).json({ error: "AI service temporarily unavailable" });
+    if (!response || !response.ok) {
+      return res.status(500).json({ error: "AI service temporarily unavailable. All providers failed." });
     }
 
     res.setHeader("Content-Type", "text/event-stream");
