@@ -38,7 +38,7 @@ server/
 - Case Investigation (/cases/:id) - Full investigation workspace with timeline, entities, evidence, notes, export
 - Transactions - Transaction search and analysis
 - Analytics - Charts and analytics
-- Graph Network - Network analysis visualization
+- Graph Network - Investigation-grade fraud ring analysis workspace with interactive SVG graph, path finder, node detail drawer
 - AI Assistant - Context-aware AI investigation assistant with structured response rendering (6 intent-specific views)
 - Rules Engine - Fraud detection rules
 - Models - ML model management
@@ -59,6 +59,18 @@ server/
   - `OPENAI_API_KEY` - Standard OpenAI API key (fallback if Azure not configured)
 
 ## Recent Changes
+- 2026-02-20: Major Graph Network page upgrade - Investigation-grade fraud ring analysis workspace
+  - Enriched mock data: 17 nodes (customer/account/device/merchant), 21 edges with relationship types (sent_money/shared_device/common_beneficiary/linked_account), risk scores, amounts
+  - 10-metric KPI strip: Total Nodes, Connections, Communities, Risk Clusters, Avg Degree, High-Risk %, Suspicious Paths, Cross-Border, Shared Devices, Velocity Spikes (all clickable)
+  - Investigation controls: search, depth slider, time/risk/entity-type filters, show-flagged/freeze-layout/suspicious-paths toggles
+  - SVG visual encoding: node size=volume, color=risk, border=intensity, badge=alerts; edge thickness=txn count, color=risk, dashed=device sharing
+  - Node/edge hover tooltips with entity details, risk badges, transaction metrics
+  - Node Detail Drawer (Sheet) with 4 tabs: Overview (summary/flags/alerts), Transactions (linked txn table), Connections (neighbor list), Cases (open cases)
+  - AI Network Insights panel: severity badges, evidence snippets, confidence %, View/Create Case actions
+  - Risk Clusters panel: risk score, node count, total value, velocity, jurisdictions, type, confidence
+  - Path Finder tool: BFS shortest path between 2 selected nodes with highlighted animated edges
+  - Action toolbar: Export, Create Case, Tag Cluster
+  - Files: src/pages/Graph.tsx
 - 2026-02-20: Context-aware AI Response Rendering System
   - New: AIResponseEnvelope type system with intent, sections, entities, actions, confidence
   - New: Hybrid intent detection (heuristic classifier) for 6 intent types: transaction_analysis, customer_analysis, sar_draft, analytics_summary, case_summary, general_answer
