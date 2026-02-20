@@ -59,6 +59,22 @@ server/
   - `OPENAI_API_KEY` - Standard OpenAI API key (fallback if Azure not configured)
 
 ## Recent Changes
+- 2026-02-20: Comprehensive Analytics & Reporting page upgrade
+  - Global control bar: time range (24h/7d/30d/90d), channel selector (All/POS/Web/Mobile/ATM/Branch), country selector, export (PDF/CSV/PNG), last updated timestamp
+  - Enhanced Executive Summary: evidence-backed clickable insights with severity dots, metric references, "View evidence" drawers; recommended actions with priority badges linking to relevant pages
+  - 9 analytics tabs (6 enhanced + 3 new):
+    - Fraud: 6 KPIs (clickable with drawers), fraud trend chart, alert funnel, top typologies, risky merchants/customers/devices tables
+    - AML: 6 KPIs, AML alert trend, typology distribution, SAR pipeline funnel, high-risk customers/counterparty tables with "Draft SAR" action
+    - Models: 10 KPIs, model performance comparison, drift trend with threshold, score distribution histogram, confusion matrix, "Run Backtest" stub
+    - Rules: 5 KPIs, rules effectiveness table with sparklines, clickable rows with "Simulate Change"/"Propose Tuning" actions
+    - Geography: metric selector toggle, country risk heatmap grid, rankings table, geo anomalies panel (IP mismatch, impossible travel, first-seen country)
+    - Channels: volume distribution chart, risk trend (multi-line), comparison table, per-channel alert funnel
+    - Users (NEW): 7 KPIs, login/failed trends, analyst productivity table, unusual access patterns, role distribution
+    - Operations (NEW): 6 KPIs, backlog trend, SLA compliance with 95% threshold, case aging histogram, oldest cases, team queues
+    - Audit (NEW): summary stats, filter bar (search/action type/user), immutable audit events table, JSON detail drawer with correlation IDs
+  - Reusable AnalyticsDrawer component for all drilldowns (KPI detail, chart segment, table row, evidence)
+  - All tables have clickable rows with chevrons, all KPIs clickable with definition/breakdown drawers
+  - Files: src/pages/Analytics.tsx, src/lib/analytics-data.ts, src/components/analytics/*.tsx (9 tab components + AnalyticsDrawer)
 - 2026-02-20: Major Graph Network page upgrade - Investigation-grade fraud ring analysis workspace
   - Enriched mock data: 17 nodes (customer/account/device/merchant), 21 edges with relationship types (sent_money/shared_device/common_beneficiary/linked_account), risk scores, amounts
   - 10-metric KPI strip: Total Nodes, Connections, Communities, Risk Clusters, Avg Degree, High-Risk %, Suspicious Paths, Cross-Border, Shared Devices, Velocity Spikes (all clickable)
