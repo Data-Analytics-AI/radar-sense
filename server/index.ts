@@ -148,7 +148,7 @@ const isProduction = process.env.NODE_ENV === "production";
 if (isProduction) {
   const distPath = path.resolve(process.cwd(), "dist", "public");
   app.use(express.static(distPath, { maxAge: "1d" }));
-  app.get("*", (_req, res) => {
+  app.get("/{*splat}", (_req, res) => {
     res.sendFile(path.join(distPath, "index.html"));
   });
 }
