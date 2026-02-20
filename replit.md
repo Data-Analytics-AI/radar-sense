@@ -53,6 +53,11 @@ server/
 - `OPENAI_API_KEY` - Required for AI Assistant chat functionality
 
 ## Recent Changes
+- 2026-02-20: Fixed Cases page - cases now persist when created via New Case dialog
+  - Added fallback in generateCases to always produce at least 5 cases with deterministic data
+  - Converted Cases page from useMemo to useState so new cases are added to the list
+  - Wired onCaseCreated callback from NewCaseDialog to Cases page state
+  - Fixed CasePriority type mismatch (aligned 'urgent' → 'critical' to match RiskLevel)
 - 2026-02-17: Added clickable rows + details drawer across Transactions, Live Monitoring, and Alerts pages
   - Created reusable DetailsDrawer component (Sheet on desktop >=1024px, Dialog on mobile)
   - Created TransactionDetailsPanel with full transaction detail layout (summary, customer, merchant, risk, geo/device, raw payload)
