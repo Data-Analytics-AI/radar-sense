@@ -57,6 +57,14 @@ server/
   - `OPENAI_API_KEY` - Standard OpenAI API key (fallback if Azure not configured)
 
 ## Recent Changes
+- 2026-02-20: Built comprehensive visual Rule Engine Builder
+  - Expanded Rule types: RuleCondition trees, RuleConditionGroup (recursive AND/OR), RuleAction, RuleVersion, RuleAuditEntry, SeverityLevel
+  - Updated mock data with rich sample rules including nested condition groups, versions, and audit logs
+  - Rebuilt Rules page as full visual builder with split layout (rule list + builder panel)
+  - Builder tab: condition tree editor with AND/OR toggle, field/operator/value dropdowns, nested groups, drag-and-drop reordering, actions section
+  - Simulation tab: evaluates rules against 500 mock transactions with hit rate, progress bar, and matched transaction table
+  - History tab: version history with restore capability + timeline audit log
+  - Create new rule flow with blank builder and save functionality
 - 2026-02-20: Added Azure OpenAI support for AI Assistant chat
   - Backend now supports both Azure OpenAI and standard OpenAI providers
   - Azure OpenAI is preferred when all three env vars are set (key, endpoint, deployment)
