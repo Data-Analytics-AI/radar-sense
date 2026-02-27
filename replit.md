@@ -10,7 +10,7 @@ SnapFort is an enterprise fraud detection and AML (Anti-Money Laundering) transa
 The application features a React 18 frontend with TypeScript, Vite, Tailwind CSS, and Shadcn UI. The backend is an Express.js API server, primarily for proxying AI chat requests. Routing is handled by react-router-dom v6, and state management utilizes TanStack React Query v5. The system currently uses client-side mock data.
 
 Key features include:
-- **Dashboard**: Overview statistics, charts, and risk distribution.
+- **Dashboard (Fraud Command Center)**: A 10-section command center with system status header, 6 expandable KPI cards, live threat monitor, intelligent trend analytics (channel-segmented volume, fraud trend with anomaly markers, risk pyramid), AI fraud insights panel, investigator operations (enhanced live feed with device icons/geo flags/risk tooltips, priority-sorted alerts with SLA timers, risky entities), model health snapshot, analyst performance, fraud network mini-preview, and compliance status. Data from `src/lib/dashboard-data.ts`.
 - **Real-time Monitoring**: Live transaction feed.
 - **Alert & Case Management**: Tools for managing alerts and tracking case investigations, including a comprehensive workspace for individual cases with timelines, entities, evidence, and notes.
 - **Transaction Analysis**: Search and detailed analysis of transactions.

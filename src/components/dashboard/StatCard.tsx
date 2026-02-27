@@ -1,6 +1,6 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface StatCardProps {
   title: string;
@@ -12,6 +12,7 @@ interface StatCardProps {
     label: string;
   };
   variant?: 'default' | 'success' | 'warning' | 'danger';
+  details?: Record<string, string | number>;
   className?: string;
 }
 
@@ -22,8 +23,10 @@ export const StatCard = ({
   icon, 
   trend, 
   variant = 'default',
+  details,
   className 
 }: StatCardProps) => {
+  const [expanded, setExpanded] = useState(false);
   const getTrendIcon = () => {
     if (!trend) return null;
     if (trend.value > 0) return <TrendingUp className="h-3 w-3" />;
@@ -89,6 +92,29 @@ export const StatCard = ({
           {icon}
         </div>
       </div>
+      {details && (
+        <button
+          data-testid={`button-expand-${title.toLowerCase().replace(/\s+/g, '-')}`}
+          onClick={() => setExpanded(!expanded)}
+          className="flex items-center gap-1 text-xs text-muted-foreground mt-2 hover-elevate rounded-md px-1 py-0.5 -ml-1"
+        >
+          {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+          <span>{expanded ? 'Less' : 'Details'}</span>
+        </button>
+      )}
+      {details && expanded && (
+        <div
+          data-testid={`details-panel-${title.toLowerCase().replace(/\s+/g, '-')}`}
+          className="mt-2 pt-2 border-t border-border/50 grid grid-cols-2 gap-x-4 gap-y-1"
+        >
+          {Object.entries(details).map(([key, val]) => (
+            <div key={key} className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground truncate mr-1">{key}</span>
+              <span className="font-medium tabular-nums">{val}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
