@@ -147,8 +147,10 @@ const isProduction = process.env.NODE_ENV === "production";
 
 if (isProduction) {
   const distPath = path.resolve(process.cwd(), "dist", "public");
-  app.use(express.static(distPath, { maxAge: "1d" }));
+  app.use("/assets", express.static(path.join(distPath, "assets"), { maxAge: "30d", immutable: true }));
+  app.use(express.static(distPath, { maxAge: 0 }));
   app.get("/{*splat}", (_req, res) => {
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     res.sendFile(path.join(distPath, "index.html"));
   });
 }
